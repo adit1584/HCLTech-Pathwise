@@ -21,7 +21,7 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(8, 'JWT_SECRET must be at least 8 characters'),
   JWT_EXPIRES_IN: z.string().default('7d'),
   GROQ_API_KEY: z.string().default(''),
-  GROQ_MODEL: z.string().default('llama-3.3-70b-versatile'),
+  GROQ_MODEL: z.string().default('openai/gpt-oss-120b'),
   CLIENT_URL: z.string().default('http://localhost:5173'),
 });
 

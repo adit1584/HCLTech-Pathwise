@@ -59,13 +59,14 @@ function pathItemToRoadmapItem(
   resources: Resource[],
   learningPreferences: string[],
   allSkills: Skill[],
+  index: number = 0,
 ): RoadmapItem {
   const matchedResources = item.type === 'SKILL'
     ? findResources(item.skillId, resources, learningPreferences)
     : [];
 
   return {
-    id: generateId(),
+    id: `${item.type.toLowerCase()}-${item.skillId}-${item.milestone}-${index}`,
     type: item.type === 'SKILL' ? 'COURSE' : item.type,
     title: item.skillName,
     skillIds: [item.skillId],
@@ -91,12 +92,13 @@ function assignStatuses(
   const completed = new Set(completedSkills);
 
   return items.map(item => {
-    // Check if all prerequisite skills are either completed or not in the gap set
+    // Check if all prerequisite skills are completed
     const allPrereqsMet = item.prerequisiteIds.every(prereqId =>
       completed.has(prereqId)
     );
 
-    if (completed.has(item.skillIds[0])) {
+    // Only mark assessment as completed if skill is verified
+    if (completed.has(item.skillIds[0]) && item.type === 'ASSESSMENT') {
       return { ...item, status: 'completed' as const };
     }
 
@@ -134,8 +136,8 @@ export function generateRoadmap(input: RoadmapGeneratorInput): {
   } = input;
 
   // Convert path items to roadmap items with matched resources
-  let roadmapItems = pathItems.map(item =>
-    pathItemToRoadmapItem(item, resources, learningPreferences, allSkills)
+  let roadmapItems = pathItems.map((item, index) =>
+    pathItemToRoadmapItem(item, resources, learningPreferences, allSkills, index)
   );
 
   // Assign statuses based on prerequisites and completion

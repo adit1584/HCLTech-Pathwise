@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import { LearnerModel } from '../models/Learner.js';
 import { interpretGoalSchema, structuredGoalSchema } from '../middleware/validation.js';
-import { loadRolesData } from '../utils/load-data.js';
+import { getAllTargetRoles, resolveOrSynthesizeRole } from '../utils/dynamic-roles.js';
 
 const router = Router();
 
@@ -17,21 +17,17 @@ router.post('/interpret', authMiddleware, async (req: AuthRequest, res: Response
 
     const { text } = parsed.data;
 
-    // Try AI interpretation first (will be implemented in Phase 3)
     let interpreted;
     try {
       const { interpretGoalWithAI } = await import('../ai/goal-interpreter.js');
       interpreted = await interpretGoalWithAI(text);
     } catch {
-      // Fallback: deterministic keyword-based interpretation
       interpreted = interpretGoalDeterministic(text);
     }
 
-    // Validate the interpretation
-    const validationResult = structuredGoalSchema.safeParse(interpreted);
-    if (!validationResult.success) {
-      // Use deterministic fallback
-      interpreted = interpretGoalDeterministic(text);
+    // Auto-synthesize the target role if it's new
+    if (interpreted.targetRole) {
+      await resolveOrSynthesizeRole(interpreted.targetRole as string);
     }
 
     res.json({ interpreted });
@@ -50,12 +46,14 @@ router.post('/set', authMiddleware, async (req: AuthRequest, res: Response) => {
       return;
     }
 
+    // Ensure the target role is resolved/synthesized
+    await resolveOrSynthesizeRole(parsed.data.targetRole);
+
     const goal = {
       ...parsed.data,
       createdAt: new Date(),
     };
 
-    // Also set initial skill states from self-report if provided
     const { selfReportedSkills } = req.body;
 
     const update: any = {
@@ -71,7 +69,7 @@ router.post('/set', authMiddleware, async (req: AuthRequest, res: Response) => {
       const skillStates = selfReportedSkills.map((s: any) => ({
         skillId: s.skillId,
         proficiency: Math.min(100, Math.max(0, s.proficiency)),
-        confidence: 0.3, // Self-report = low confidence
+        confidence: 0.3,
         evidence: [{
           type: 'SELF_REPORT',
           score: s.proficiency,
@@ -100,8 +98,11 @@ router.post('/set', authMiddleware, async (req: AuthRequest, res: Response) => {
       learner: {
         id: learner._id,
         name: learner.name,
-        goals: learner.goals,
-        skillStates: learner.skillStates,
+        email: learner.email,
+        experienceLevel: learner.experienceLevel,
+        weeklyHours: learner.weeklyHours,
+        goalsCount: learner.goals.length,
+        skillsCount: learner.skillStates.length,
       },
     });
   } catch (error) {
@@ -110,10 +111,10 @@ router.post('/set', authMiddleware, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// GET /api/goals/roles — List available target roles
+// GET /api/goals/roles — List all available and dynamically synthesized target roles
 router.get('/roles', async (_req: AuthRequest, res: Response) => {
   try {
-    const roles = loadRolesData();
+    const roles = getAllTargetRoles();
     res.json({
       roles: roles.map((r: any) => ({
         id: r.id,
@@ -129,14 +130,26 @@ router.get('/roles', async (_req: AuthRequest, res: Response) => {
   }
 });
 
-/**
- * Deterministic fallback for goal interpretation.
- * Used when the LLM is unavailable.
- */
+// POST /api/goals/custom-role — Create a custom career role pathway on demand
+router.post('/custom-role', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { roleName } = req.body;
+    if (!roleName || typeof roleName !== 'string') {
+      res.status(400).json({ error: 'roleName string is required' });
+      return;
+    }
+
+    const role = await resolveOrSynthesizeRole(roleName);
+    res.json({ role });
+  } catch (error) {
+    console.error('Custom role creation error:', error);
+    res.status(500).json({ error: 'Failed to create custom role' });
+  }
+});
+
 function interpretGoalDeterministic(text: string) {
   const lower = text.toLowerCase();
 
-  // Detect target role
   let targetRole = 'data-scientist';
   if (lower.includes('full stack') || lower.includes('fullstack') || lower.includes('web dev')) {
     targetRole = 'full-stack-developer';
@@ -146,33 +159,30 @@ function interpretGoalDeterministic(text: string) {
     targetRole = 'data-analyst';
   } else if (lower.includes('ai engineer') || lower.includes('artificial intelligence')) {
     targetRole = 'ai-engineer';
+  } else if (lower.includes('3d') || lower.includes('animat')) {
+    targetRole = '3d-animator';
   }
 
-  // Detect timeframe
   let timeframeWeeks = 24;
   const monthMatch = lower.match(/(\d+)\s*month/);
   if (monthMatch) timeframeWeeks = parseInt(monthMatch[1]) * 4;
   const weekMatch = lower.match(/(\d+)\s*week/);
   if (weekMatch) timeframeWeeks = parseInt(weekMatch[1]);
 
-  // Detect weekly hours
   let weeklyHours = 8;
   const hourMatch = lower.match(/(\d+)\s*hour/);
   if (hourMatch) weeklyHours = parseInt(hourMatch[1]);
 
-  // Detect experience level
-  let currentLevel: string = 'beginner';
+  let currentLevel = 'beginner_intermediate';
   if (lower.includes('advanced') || lower.includes('senior')) currentLevel = 'advanced';
   else if (lower.includes('intermediate') || lower.includes('some experience')) currentLevel = 'intermediate';
-  else if (lower.includes('basic') || lower.includes('beginner')) currentLevel = 'beginner_intermediate';
 
-  // Detect learning preferences
   const learningPreference: string[] = [];
   if (lower.includes('project')) learningPreference.push('project_based');
   if (lower.includes('video')) learningPreference.push('video');
   if (lower.includes('reading') || lower.includes('book')) learningPreference.push('reading');
   if (lower.includes('interactive') || lower.includes('hands-on')) learningPreference.push('interactive');
-  if (learningPreference.length === 0) learningPreference.push('course');
+  if (learningPreference.length === 0) learningPreference.push('project_based');
 
   return {
     targetRole,

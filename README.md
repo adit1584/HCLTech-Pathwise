@@ -130,4 +130,4 @@ Every recommendation provides a full mathematical trace showing why it was prior
 
 ## 📚 Documentation
 - [System Architecture](docs/PATHWISE_ARCHITECTURE.md)
-- [Hackathon Master Specification](docs/PATHWISE_MASTER_PROMPT.md)
+

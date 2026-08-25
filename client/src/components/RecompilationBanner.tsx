@@ -11,47 +11,56 @@ export const RecompilationBanner: React.FC<RecompilationBannerProps> = ({ result
   if (!result) return null;
 
   return (
-    <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-950/80 via-slate-900 to-indigo-950/60 border border-indigo-500/40 glow-indigo text-slate-200 animate-in fade-in duration-300">
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-indigo-600/30 text-indigo-300 border border-indigo-500/50 mt-0.5">
-            <Cpu className="h-5 w-5 animate-pulse" />
+    <div
+      className="recompile-banner"
+      role="status"
+      aria-live="polite"
+      aria-label="Path recompilation notification"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          {/* Icon */}
+          <div
+            className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center mt-0.5"
+            style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.35)' }}
+          >
+            <Cpu size={16} className="text-[var(--primary-400)] animate-glow-pulse" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-indigo-400">
-                Learning Path Recompiled
+
+          <div className="space-y-1.5">
+            {/* Title row */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--primary-400)]">
+                Path Recompiled
               </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 border border-emerald-500/40 text-emerald-300 flex items-center gap-1 font-mono">
-                <CheckCircle2 className="h-3 w-3" /> INCREMENTAL
+              <span className="badge badge-emerald text-[9px]">
+                <CheckCircle2 size={9} /> Incremental
               </span>
             </div>
-            <p className="text-sm font-semibold text-white mt-0.5">{result.reason}</p>
 
-            {/* Compiler Stats */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-slate-300 font-mono">
-              <span className="flex items-center gap-1">
-                <span className="text-indigo-400 font-bold">{result.dependenciesChecked}</span>{' '}
-                dependencies checked
+            <p className="text-[13px] font-semibold text-[var(--text-primary)]">{result.reason}</p>
+
+            {/* Compiler stats */}
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-mono text-[var(--text-muted)]">
+              <span>
+                <strong className="text-[var(--primary-300)]">{result.dependenciesChecked}</strong> deps checked
               </span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <span className="text-indigo-400 font-bold">{result.skillsRecomputed}</span> skills
-                recomputed
+              <span>·</span>
+              <span>
+                <strong className="text-[var(--primary-300)]">{result.skillsRecomputed}</strong> skills recomputed
               </span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <span className="text-indigo-400 font-bold">{result.milestonesUpdated}</span> milestones
-                updated
+              <span>·</span>
+              <span>
+                <strong className="text-[var(--primary-300)]">{result.milestonesUpdated}</strong> milestones updated
               </span>
             </div>
 
             {/* Changes list */}
             {result.changes && result.changes.length > 0 && (
-              <div className="mt-3 pt-2.5 border-t border-indigo-500/20 space-y-1">
-                {result.changes.slice(0, 3).map((change, i) => (
-                  <div key={i} className="text-xs text-slate-300 flex items-center gap-1.5">
-                    <ArrowUpRight className="h-3.5 w-3.5 text-indigo-400" />
+              <div className="pt-2 border-t border-[rgba(99,102,241,0.15)] space-y-1">
+                {result.changes.slice(0, 3).map((change: any, i: number) => (
+                  <div key={i} className="flex items-start gap-2 text-[11px] text-[var(--text-secondary)]">
+                    <ArrowUpRight size={12} className="text-[var(--primary-400)] shrink-0 mt-0.5" />
                     <span>{change.description}</span>
                   </div>
                 ))}
@@ -63,9 +72,10 @@ export const RecompilationBanner: React.FC<RecompilationBannerProps> = ({ result
         {onDismiss && (
           <button
             onClick={onDismiss}
-            className="p-1 rounded text-slate-400 hover:text-white transition-colors"
+            className="shrink-0 p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-overlay)] transition-all cursor-pointer"
+            aria-label="Dismiss notification"
           >
-            <X className="h-4 w-4" />
+            <X size={14} />
           </button>
         )}
       </div>

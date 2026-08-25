@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ReactFlow,
   Background,
@@ -11,24 +12,66 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { api } from '../services/api';
-import type { SkillNode, SkillState } from '../types';
-import { Network, Info, Eye, Layers, CheckCircle2, AlertCircle, X } from 'lucide-react';
+import type { SkillNode, SkillState, TargetRole } from '../types';
+import {
+  Network,
+  Info,
+  Eye,
+  Layers,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  Filter,
+  Search,
+  Sparkles,
+  Target,
+  Lock,
+  Unlock,
+  ArrowRight,
+  TrendingUp,
+  Award,
+  Zap,
+  BookOpen,
+  LayoutGrid,
+  GitBranch,
+} from 'lucide-react';
 import { RecommendationTraceModal } from '../components/RecommendationTraceModal';
 
+// ── Tier Configuration ─────────────────────────────────────────────────────
+const TIER_META: Record<number, { title: string; subtitle: string; color: string; badge: string }> = {
+  0: { title: 'Tier 1: Foundations', subtitle: 'Zero prerequisite foundational building blocks', color: '#10b981', badge: 'Foundations' },
+  1: { title: 'Tier 2: Applied Core', subtitle: 'Core applied libraries and essential techniques', color: '#0ea5e9', badge: 'Core Applied' },
+  2: { title: 'Tier 3: Frameworks & Modeling', subtitle: 'Production frameworks, architectures and algorithms', color: '#f59e0b', badge: 'Frameworks' },
+  3: { title: 'Tier 4: Mastery & Capstones', subtitle: 'Advanced systems, production deployment and capstone integration', color: '#8b5cf6', badge: 'Mastery' },
+};
+
 export const SkillGraphPage: React.FC = () => {
+  const navigate = useNavigate();
+
   const [skills, setSkills] = useState<SkillNode[]>([]);
   const [skillStates, setSkillStates] = useState<{ [id: string]: SkillState }>({});
+  const [targetRole, setTargetRole] = useState<string>('full-stack-developer');
+  const [targetRoleSkills, setTargetRoleSkills] = useState<Set<string>>(new Set());
   const [selectedSkill, setSelectedSkill] = useState<SkillNode | null>(null);
   const [traceSkillId, setTraceSkillId] = useState<string | null>(null);
+
+  // View & Filter States
+  const [viewMode, setViewMode] = useState<'graph' | 'matrix'>('graph');
+  const [roleOnly, setRoleOnly] = useState<boolean>(true);
+  const [selectedTier, setSelectedTier] = useState<number | 'ALL'>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'COMPLETED' | 'IN_PROGRESS' | 'READY' | 'LOCKED'>('ALL');
   const [loading, setLoading] = useState(true);
 
+  // Load Graph and Profile Data
   useEffect(() => {
-    const loadGraph = async () => {
+    const loadGraphData = async () => {
       try {
         setLoading(true);
-        const [graphData, profileData] = await Promise.all([
+        const [graphData, profileData, currentPath] = await Promise.all([
           api.getSkillGraph(),
           api.getProfile().catch(() => null),
+          api.getCurrentPath().catch(() => null),
         ]);
 
         setSkills(graphData.nodes || []);
@@ -38,6 +81,35 @@ export const SkillGraphPage: React.FC = () => {
           stateMap[s.skillId] = s;
         });
         setSkillStates(stateMap);
+
+        const goalRole = profileData?.goals?.[profileData.goals.length - 1]?.targetRole || 'full-stack-developer';
+        setTargetRole(goalRole);
+
+        // Extract required skills for current target role
+        const roleSkillSet = new Set<string>();
+        (currentPath?.roadmap || []).forEach(item => {
+          (item.skillIds || []).forEach(s => roleSkillSet.add(s));
+        });
+
+        // If roadmap doesn't have them yet, find matching role
+        if (roleSkillSet.size === 0) {
+          try {
+            const rolesRes = await api.getRoles();
+            const foundRole = rolesRes.roles.find(r => r.id === goalRole);
+            if (foundRole?.requiredSkills) {
+              foundRole.requiredSkills.forEach(req => roleSkillSet.add(req.skillId));
+            }
+          } catch {
+            // fallback
+          }
+        }
+
+        // Defaults if empty
+        if (roleSkillSet.size === 0) {
+          ['python', 'javascript', 'react', 'nodejs', 'sql', 'html-css', 'git'].forEach(s => roleSkillSet.add(s));
+        }
+
+        setTargetRoleSkills(roleSkillSet);
       } catch (err) {
         console.error('Failed to load skill graph:', err);
       } finally {
@@ -45,87 +117,229 @@ export const SkillGraphPage: React.FC = () => {
       }
     };
 
-    loadGraph();
+    loadGraphData();
   }, []);
 
-  // Compute hierarchical layout coordinates for React Flow nodes
-  const { nodes, edges } = useMemo(() => {
-    if (skills.length === 0) return { nodes: [], edges: [] };
+  // Compute Topological Depths / Tiers for all skills
+  const skillTiers = useMemo<{ [id: string]: number }>(() => {
+    const depths: { [id: string]: number } = {};
+    const skillMap = new Map<string, SkillNode>(skills.map(s => [s.id, s]));
 
-    // Group skills by estimated graph depth / category
-    const categories: { [cat: string]: SkillNode[] } = {};
+    const computeDepth = (id: string, visited = new Set<string>()): number => {
+      if (depths[id] !== undefined) return depths[id];
+      if (visited.has(id)) return 0; // Avoid cycles
+      visited.add(id);
+
+      const skill = skillMap.get(id);
+      if (!skill || !skill.prerequisites || skill.prerequisites.length === 0) {
+        depths[id] = 0;
+        return 0;
+      }
+
+      let maxPrereqDepth = 0;
+      for (const p of skill.prerequisites) {
+        maxPrereqDepth = Math.max(maxPrereqDepth, computeDepth(p, new Set(visited)) + 1);
+      }
+
+      depths[id] = Math.min(maxPrereqDepth, 3); // max 4 tiers (0-3)
+      return depths[id];
+    };
+
+    skills.forEach(s => computeDepth(s.id));
+    return depths;
+  }, [skills]);
+
+  // Compute unlocks mapping (which skills are unlocked by this skill)
+  const unlocksMap = useMemo<{ [id: string]: string[] }>(() => {
+    const map: { [id: string]: string[] } = {};
     skills.forEach(s => {
-      const cat = s.category || 'General';
-      if (!categories[cat]) categories[cat] = [];
-      categories[cat].push(s);
+      (s.prerequisites || []).forEach(p => {
+        if (!map[p]) map[p] = [];
+        map[p].push(s.name);
+      });
     });
+    return map;
+  }, [skills]);
 
-    const categoryOrder = [
-      'Programming',
-      'Data',
-      'Mathematics',
-      'Data Science Libraries',
-      'Data Science',
-      'Data Engineering',
-      'Machine Learning',
-      'AI',
-      'Web Development',
-      'Backend',
-      'Engineering',
-      'DevOps',
-      'Tools',
-      'Applied',
-    ];
+  // Filter skills based on user controls
+  const visibleSkills = useMemo(() => {
+    return skills.filter(skill => {
+      // Role filter
+      if (roleOnly && targetRoleSkills.size > 0 && !targetRoleSkills.has(skill.id)) {
+        return false;
+      }
+
+      // Tier filter
+      const tier = skillTiers[skill.id] ?? 0;
+      if (selectedTier !== 'ALL' && tier !== selectedTier) {
+        return false;
+      }
+
+      // Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const match = skill.name.toLowerCase().includes(q) ||
+          skill.id.toLowerCase().includes(q) ||
+          skill.category?.toLowerCase().includes(q);
+        if (!match) return false;
+      }
+
+      // Status filter
+      const state = skillStates[skill.id];
+      const prof = state?.proficiency ?? 0;
+      const prereqsMet = (skill.prerequisites || []).every(p => (skillStates[p]?.proficiency ?? 0) >= 60);
+
+      if (statusFilter === 'COMPLETED' && prof < 70) return false;
+      if (statusFilter === 'IN_PROGRESS' && (prof === 0 || prof >= 70)) return false;
+      if (statusFilter === 'READY' && (!prereqsMet || prof >= 70)) return false;
+      if (statusFilter === 'LOCKED' && prereqsMet) return false;
+
+      return true;
+    });
+  }, [skills, roleOnly, targetRoleSkills, selectedTier, searchQuery, statusFilter, skillTiers, skillStates]);
+
+  // Build Topological Graph Flow Nodes & Edges
+  const { nodes, edges } = useMemo(() => {
+    if (visibleSkills.length === 0) return { nodes: [], edges: [] };
+
+    // Group visible skills by tier
+    const tierGroups: { [tier: number]: SkillNode[] } = { 0: [], 1: [], 2: [], 3: [] };
+    visibleSkills.forEach(s => {
+      const t = skillTiers[s.id] ?? 0;
+      if (!tierGroups[t]) tierGroups[t] = [];
+      tierGroups[t].push(s);
+    });
 
     const flowNodes: Node[] = [];
     const flowEdges: Edge[] = [];
+    const visibleIdSet = new Set(visibleSkills.map(s => s.id));
 
-    // Layout positions
-    const catKeys = Object.keys(categories).sort(
-      (a, b) => categoryOrder.indexOf(a) - categoryOrder.indexOf(b)
-    );
+    // Position each tier in structured vertical columns
+    Object.entries(tierGroups).forEach(([tierStr, items]) => {
+      const tier = Number(tierStr);
+      const meta = TIER_META[tier] || TIER_META[0];
+      const colX = tier * 340 + 80;
 
-    catKeys.forEach((cat, colIdx) => {
-      const items = categories[cat];
+      // Add column header node
+      flowNodes.push({
+        id: `header-tier-${tier}`,
+        position: { x: colX, y: 20 },
+        selectable: false,
+        draggable: false,
+        data: {
+          label: (
+            <div
+              className="p-3 px-4 rounded-2xl text-left w-64 shadow-lg select-none"
+              style={{
+                backgroundColor: '#121828',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                boxShadow: '0 8px 24px -6px rgba(0, 0, 0, 0.6)',
+              }}
+            >
+              <span
+                className="badge text-[9px] font-bold"
+                style={{ background: `${meta.color}22`, borderColor: `${meta.color}50`, color: meta.color }}
+              >
+                {meta.badge}
+              </span>
+              <h4 className="text-[12px] font-bold text-white font-display mt-1">{meta.title}</h4>
+            </div>
+          ),
+        },
+      });
+
       items.forEach((skill, rowIdx) => {
         const state = skillStates[skill.id];
         const prof = state?.proficiency ?? 0;
+        const conf = Math.round((state?.confidence ?? 0.5) * 100);
+        const isTarget = targetRoleSkills.has(skill.id);
+        const prereqsMet = (skill.prerequisites || []).every(p => (skillStates[p]?.proficiency ?? 0) >= 60);
+        const isSelected = selectedSkill?.id === skill.id;
 
-        let borderClass = 'border-slate-700 bg-slate-900';
-        let badgeColor = 'text-slate-400 bg-slate-800';
+        // Visual Styling
+        let cardBg = '#0e1320';
+        let cardBorder = '1px solid rgba(255, 255, 255, 0.08)';
+        let cardShadow = '0 6px 18px -4px rgba(0, 0, 0, 0.5)';
+
+        let statusBadge = (
+          <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 flex items-center gap-1">
+            <Lock size={9} /> Locked
+          </span>
+        );
 
         if (prof >= 70) {
-          borderClass = 'border-emerald-500/80 bg-emerald-950/40 shadow-emerald-950/40';
-          badgeColor = 'text-emerald-300 bg-emerald-950 border border-emerald-500/40';
-        } else if (prof >= 50) {
-          borderClass = 'border-indigo-500/80 bg-indigo-950/40 shadow-indigo-950/40';
-          badgeColor = 'text-indigo-300 bg-indigo-950 border border-indigo-500/40';
+          cardBg = '#0c1a1f';
+          cardBorder = '1.5px solid rgba(16, 185, 129, 0.6)';
+          cardShadow = '0 0 20px -4px rgba(16, 185, 129, 0.25)';
+          statusBadge = (
+            <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+              <CheckCircle2 size={9} /> {prof}% Mastered
+            </span>
+          );
         } else if (prof > 0) {
-          borderClass = 'border-amber-500/80 bg-amber-950/40';
-          badgeColor = 'text-amber-300 bg-amber-950 border border-amber-500/40';
+          cardBg = '#181512';
+          cardBorder = '1.5px solid rgba(245, 158, 11, 0.6)';
+          cardShadow = '0 0 20px -4px rgba(245, 158, 11, 0.25)';
+          statusBadge = (
+            <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-500/40 flex items-center gap-1">
+              <TrendingUp size={9} /> {prof}% In Progress
+            </span>
+          );
+        } else if (prereqsMet) {
+          cardBg = '#0c1824';
+          cardBorder = '1.5px solid rgba(14, 165, 233, 0.6)';
+          cardShadow = '0 0 18px -4px rgba(14, 165, 233, 0.25)';
+          statusBadge = (
+            <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 flex items-center gap-1">
+              <Unlock size={9} /> Ready to Learn
+            </span>
+          );
+        }
+
+        if (isSelected) {
+          cardBorder = '2px solid #f59e0b';
+          cardShadow = '0 0 24px -2px rgba(245, 158, 11, 0.4)';
         }
 
         flowNodes.push({
           id: skill.id,
-          position: { x: colIdx * 280 + 50, y: rowIdx * 130 + 80 },
+          position: { x: colX, y: rowIdx * 150 + 110 },
           data: {
             label: (
               <div
                 onClick={() => setSelectedSkill(skill)}
-                className={`p-3 rounded-xl border ${borderClass} shadow-lg cursor-pointer transition-all hover:scale-105 text-left w-56 space-y-1.5`}
+                className="p-3.5 rounded-2xl cursor-pointer transition-all hover:scale-[1.03] text-left w-64 space-y-2 select-none"
+                style={{
+                  backgroundColor: cardBg,
+                  border: cardBorder,
+                  boxShadow: cardShadow,
+                }}
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono text-slate-400 truncate max-w-[120px]">
+                {/* Header row */}
+                <div className="flex items-center justify-between gap-1.5">
+                  <span className="text-[10px] font-mono text-slate-400 truncate max-w-[110px]">
                     {skill.category}
                   </span>
-                  <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${badgeColor}`}>
-                    {prof}%
-                  </span>
+                  {statusBadge}
                 </div>
-                <div className="font-bold text-xs text-white truncate">{skill.name}</div>
-                <div className="text-[10px] text-slate-500 flex justify-between items-center">
+
+                {/* Skill Name */}
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="font-bold text-[13px] text-white font-display truncate">
+                    {skill.name}
+                  </h4>
+                  {isTarget && (
+                    <span className="shrink-0 text-[10px] text-amber-400" title="Target Role Required Skill">
+                      🎯
+                    </span>
+                  )}
+                </div>
+
+                {/* Footer metadata */}
+                <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-1 border-t border-white/[0.06]">
                   <span>Diff: {skill.difficulty}/5</span>
                   <span>~{skill.estimatedHours}h</span>
+                  <span>Conf: {conf}%</span>
                 </div>
               </div>
             ),
@@ -136,147 +350,430 @@ export const SkillGraphPage: React.FC = () => {
 
         // Add prerequisite edges
         (skill.prerequisites || []).forEach(prereqId => {
-          flowEdges.push({
-            id: `e-${prereqId}-${skill.id}`,
-            source: prereqId,
-            target: skill.id,
-            type: 'smoothstep',
-            animated: true,
-            style: { stroke: '#6366f1', strokeWidth: 1.5, opacity: 0.6 },
-            markerEnd: {
-              type: MarkerType.ArrowClosed,
-              color: '#6366f1',
-            },
-          });
+          if (visibleIdSet.has(prereqId)) {
+            const isPrereqDone = (skillStates[prereqId]?.proficiency ?? 0) >= 60;
+            flowEdges.push({
+              id: `edge-${prereqId}-${skill.id}`,
+              source: prereqId,
+              target: skill.id,
+              animated: !isPrereqDone && prereqsMet,
+              style: {
+                stroke: isPrereqDone ? '#10b981' : prereqsMet ? '#0ea5e9' : 'rgba(148, 163, 184, 0.25)',
+                strokeWidth: 2,
+              },
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                color: isPrereqDone ? '#10b981' : prereqsMet ? '#0ea5e9' : 'rgba(148, 163, 184, 0.25)',
+              },
+            });
+          }
         });
       });
     });
 
     return { nodes: flowNodes, edges: flowEdges };
-  }, [skills, skillStates]);
+  }, [visibleSkills, skillTiers, skillStates, targetRoleSkills, selectedSkill]);
+
+  // Group visible skills by Tier for Matrix View
+  const tieredMatrix = useMemo(() => {
+    const map: Record<number, SkillNode[]> = { 0: [], 1: [], 2: [], 3: [] };
+    visibleSkills.forEach(s => {
+      const t = skillTiers[s.id] ?? 0;
+      if (!map[t]) map[t] = [];
+      map[t].push(s);
+    });
+    return map;
+  }, [visibleSkills, skillTiers]);
 
   return (
-    <div className="relative h-[calc(100vh-4rem)] w-full overflow-hidden flex">
-      {/* Main Flow Canvas */}
-      <div className="flex-1 h-full relative">
-        {/* Floating Header */}
-        <div className="absolute top-4 left-4 z-10 p-3 rounded-xl bg-slate-900/90 border border-slate-800 backdrop-blur-md space-y-1">
+    <div className="relative h-[calc(100vh-60px)] w-full overflow-hidden flex flex-col page-enter bg-[var(--bg-base)]">
+
+      {/* ── Top Command Bar ────────────────────────────────────────── */}
+      <div className="p-4 px-6 bg-[var(--bg-surface)] border-b border-[var(--border-dim)] flex flex-col md:flex-row md:items-center justify-between gap-3 z-10">
+        <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Network className="h-4 w-4 text-indigo-400" />
-            <h2 className="text-sm font-bold text-white">Knowledge Dependency Graph</h2>
-          </div>
-          <div className="flex items-center gap-3 text-[11px] font-mono text-slate-400">
-            <span className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-emerald-400" /> &gt;70% Mastered
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[rgba(245,158,11,0.12)] border border-[rgba(245,158,11,0.28)] text-[var(--primary-300)]">
+              <Network size={11} /> PREREQUISITE DAG
             </span>
-            <span className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-indigo-400" /> 50-70% Developing
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="h-2 w-2 rounded-full bg-slate-600" /> Not Started
+            <span className="text-[11px] font-mono text-[var(--text-muted)]">
+              Target: <strong className="text-[var(--text-primary)]">{targetRole}</strong>
             </span>
           </div>
+          <h1 className="text-lg font-bold text-[var(--text-primary)] font-display tracking-tight">
+            Topological Knowledge & Prerequisite Graph
+          </h1>
         </div>
 
-        {loading ? (
-          <div className="flex h-full items-center justify-center text-slate-400 text-sm">
-            <div className="h-6 w-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mr-2" />
-            Rendering knowledge DAG...
-          </div>
-        ) : (
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            fitView
-            minZoom={0.2}
-            maxZoom={1.5}
-            attributionPosition="bottom-left"
+        {/* View Switcher & Controls */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Target Role Only Toggle */}
+          <button
+            onClick={() => setRoleOnly(r => !r)}
+            className={`px-3 py-1.5 rounded-xl text-[11px] font-mono border transition-all cursor-pointer flex items-center gap-1.5 ${
+              roleOnly
+                ? 'bg-[var(--primary-500)] text-slate-950 font-bold border-transparent shadow-[0_2px_10px_-2px_rgba(245,158,11,0.5)]'
+                : 'bg-[var(--bg-void)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+            }`}
+            title={roleOnly ? 'Showing only skills required for your target role' : 'Showing all global skills in the universe'}
           >
-            <Background color="#1e293b" gap={20} size={1} />
-            <Controls />
-            <MiniMap
-              nodeColor="#4f46e5"
-              maskColor="rgba(11, 15, 23, 0.85)"
-              className="bg-slate-950! border! border-slate-800! rounded-lg!"
-            />
-          </ReactFlow>
+            <Target size={12} />
+            <span>{roleOnly ? 'My Goal Skills Only' : 'All Universe Skills'}</span>
+          </button>
+
+          {/* View Mode Toggle */}
+          <div className="flex items-center bg-[var(--bg-void)] p-1 rounded-xl border border-[var(--border-subtle)]">
+            <button
+              onClick={() => setViewMode('graph')}
+              className={`px-3 py-1 rounded-lg text-[11px] font-mono transition-all cursor-pointer flex items-center gap-1 ${
+                viewMode === 'graph' ? 'bg-[var(--bg-surface)] text-[var(--primary-300)] font-bold shadow-sm' : 'text-[var(--text-muted)]'
+              }`}
+            >
+              <GitBranch size={12} /> Canvas
+            </button>
+            <button
+              onClick={() => setViewMode('matrix')}
+              className={`px-3 py-1 rounded-lg text-[11px] font-mono transition-all cursor-pointer flex items-center gap-1 ${
+                viewMode === 'matrix' ? 'bg-[var(--bg-surface)] text-[var(--primary-300)] font-bold shadow-sm' : 'text-[var(--text-muted)]'
+              }`}
+            >
+              <LayoutGrid size={12} /> Tier Matrix
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Sub-toolbar: Search & Tier Filters ──────────────────────── */}
+      <div className="px-6 py-2.5 bg-[var(--bg-surface)]/80 border-b border-[var(--border-dim)] flex items-center justify-between gap-3 overflow-x-auto text-[11px] font-mono">
+        {/* Search */}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bg-void)] border border-[var(--border-subtle)] w-60">
+          <Search size={12} className="text-[var(--text-muted)] shrink-0" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Find skill node…"
+            className="flex-1 bg-transparent outline-none text-[12px] text-[var(--text-primary)] placeholder-[var(--text-muted)] font-sans"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className="text-[var(--text-muted)]">
+              <X size={11} />
+            </button>
+          )}
+        </div>
+
+        {/* Tier filter tabs */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[var(--text-muted)] mr-1">Tiers:</span>
+          {(['ALL', 0, 1, 2, 3] as const).map(t => (
+            <button
+              key={String(t)}
+              onClick={() => setSelectedTier(t)}
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-mono border transition-all cursor-pointer ${
+                selectedTier === t
+                  ? 'bg-[var(--primary-500)] text-slate-950 font-bold border-transparent'
+                  : 'bg-[var(--bg-void)] border-[var(--border-dim)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              {t === 'ALL' ? 'All Tiers' : TIER_META[t]?.badge || `Tier ${t + 1}`}
+            </button>
+          ))}
+        </div>
+
+        {/* Status filter */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[var(--text-muted)] mr-1">Status:</span>
+          {(['ALL', 'READY', 'IN_PROGRESS', 'COMPLETED'] as const).map(st => (
+            <button
+              key={st}
+              onClick={() => setStatusFilter(st)}
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-mono border transition-all cursor-pointer ${
+                statusFilter === st
+                  ? 'bg-[var(--primary-500)] text-slate-950 font-bold border-transparent'
+                  : 'bg-[var(--bg-void)] border-[var(--border-dim)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              {st === 'ALL' ? 'All' : st.replace('_', ' ')}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Main Display Area ──────────────────────────────────────── */}
+      <div className="flex-1 relative overflow-hidden flex">
+
+        {/* ── View 1: Canvas Mode ─────────────────────────────────── */}
+        {viewMode === 'graph' && (
+          <div className="flex-1 h-full relative">
+            {loading ? (
+              <div className="flex h-full items-center justify-center text-[var(--text-muted)] text-sm">
+                <div className="h-6 w-6 border-2 border-[var(--primary-500)] border-t-transparent rounded-full animate-spin mr-2" />
+                Computing topological layout…
+              </div>
+            ) : nodes.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center p-6 space-y-2">
+                <Network size={32} className="text-[var(--text-muted)]" />
+                <p className="text-sm text-[var(--text-secondary)]">No skills match the current filter.</p>
+                <button onClick={() => { setRoleOnly(false); setSelectedTier('ALL'); setSearchQuery(''); setStatusFilter('ALL'); }} className="btn btn-ghost text-xs">
+                  Reset Filters
+                </button>
+              </div>
+            ) : (
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                fitView
+                minZoom={0.2}
+                maxZoom={1.5}
+                attributionPosition="bottom-left"
+              >
+                <Background color="#1e2638" gap={28} size={1} />
+                <Controls />
+                <MiniMap
+                  nodeColor="#f59e0b"
+                  maskColor="rgba(7, 9, 14, 0.85)"
+                  className="bg-[var(--bg-void)]! border! border-[var(--border-subtle)]! rounded-xl!"
+                />
+              </ReactFlow>
+            )}
+          </div>
+        )}
+
+        {/* ── View 2: Tiered Matrix Mode ──────────────────────────── */}
+        {viewMode === 'matrix' && (
+          <div className="flex-1 h-full overflow-y-auto p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 items-start">
+              {[0, 1, 2, 3].map(tierNum => {
+                const meta = TIER_META[tierNum];
+                const items = tieredMatrix[tierNum] || [];
+
+                return (
+                  <div
+                    key={tierNum}
+                    className="p-5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-4 shadow-sm"
+                  >
+                    {/* Tier Column Header */}
+                    <div className="pb-3 border-b border-[var(--border-dim)] space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span
+                          className="badge text-[10px] font-bold"
+                          style={{ background: `${meta.color}18`, borderColor: `${meta.color}35`, color: meta.color }}
+                        >
+                          {meta.badge}
+                        </span>
+                        <span className="text-[11px] font-mono text-[var(--text-muted)]">
+                          {items.length} nodes
+                        </span>
+                      </div>
+                      <h3 className="text-[14px] font-bold text-[var(--text-primary)] font-display">
+                        {meta.title}
+                      </h3>
+                      <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                        {meta.subtitle}
+                      </p>
+                    </div>
+
+                    {/* Skill Cards */}
+                    <div className="space-y-2.5">
+                      {items.map(skill => {
+                        const state = skillStates[skill.id];
+                        const prof = state?.proficiency ?? 0;
+                        const prereqsMet = (skill.prerequisites || []).every(p => (skillStates[p]?.proficiency ?? 0) >= 60);
+                        const isTarget = targetRoleSkills.has(skill.id);
+                        const isSelected = selectedSkill?.id === skill.id;
+
+                        return (
+                          <div
+                            key={skill.id}
+                            onClick={() => setSelectedSkill(skill)}
+                            className={`p-3.5 rounded-xl border transition-all cursor-pointer text-left space-y-2 ${
+                              isSelected
+                                ? 'border-[var(--primary-400)] bg-[rgba(245,158,11,0.08)] ring-1 ring-[var(--primary-400)]'
+                                : prof >= 70
+                                ? 'border-[rgba(16,185,129,0.35)] bg-[rgba(16,185,129,0.03)] hover:border-[rgba(16,185,129,0.6)]'
+                                : prof > 0
+                                ? 'border-[rgba(245,158,11,0.35)] bg-[rgba(245,158,11,0.03)] hover:border-[rgba(245,158,11,0.6)]'
+                                : prereqsMet
+                                ? 'border-[rgba(14,165,233,0.35)] bg-[rgba(14,165,233,0.03)] hover:border-[rgba(14,165,233,0.6)]'
+                                : 'border-[var(--border-dim)] bg-[var(--bg-void)] opacity-70 hover:opacity-100'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-mono text-[var(--text-muted)] truncate max-w-[120px]">
+                                {skill.category}
+                              </span>
+                              {prof >= 70 ? (
+                                <span className="badge badge-emerald text-[9px]">
+                                  <CheckCircle2 size={8} /> {prof}%
+                                </span>
+                              ) : prof > 0 ? (
+                                <span className="badge badge-amber text-[9px]">
+                                  {prof}%
+                                </span>
+                              ) : prereqsMet ? (
+                                <span className="badge badge-cyan text-[9px]">
+                                  Ready
+                                </span>
+                              ) : (
+                                <span className="text-[9px] font-mono text-[var(--text-muted)] flex items-center gap-0.5">
+                                  <Lock size={8} /> Locked
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center justify-between gap-1">
+                              <h4 className="font-bold text-[13px] text-[var(--text-primary)] font-display truncate">
+                                {skill.name}
+                              </h4>
+                              {isTarget && (
+                                <span className="text-[10px]" title="Goal Required">🎯</span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center justify-between text-[10px] font-mono text-[var(--text-muted)] pt-1 border-t border-[var(--border-dim)]">
+                              <span>Diff {skill.difficulty}/5</span>
+                              <span>~{skill.estimatedHours}h</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Side Inspector Panel ─────────────────────────────────── */}
+        {selectedSkill && (
+          <aside className="w-84 h-full bg-[var(--bg-surface)] border-l border-[var(--border-dim)] p-6 flex flex-col justify-between overflow-y-auto animate-slide-right z-20 shadow-2xl">
+            <div className="space-y-5">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-[var(--border-dim)]">
+                <span className="text-[11px] font-mono text-[var(--primary-400)] uppercase font-semibold flex items-center gap-1">
+                  <Info size={13} /> Node Details
+                </span>
+                <button
+                  onClick={() => setSelectedSkill(null)}
+                  className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-raised)] transition-all cursor-pointer"
+                  aria-label="Close inspector"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="badge badge-amber text-[9px]">
+                    {selectedSkill.category}
+                  </span>
+                  <span className="text-[10px] font-mono text-[var(--text-muted)]">
+                    Tier {(skillTiers[selectedSkill.id] ?? 0) + 1}
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-[var(--text-primary)] font-display leading-snug">
+                  {selectedSkill.name}
+                </h3>
+              </div>
+
+              {/* Mastery & Confidence Gauge */}
+              <div className="p-4 rounded-xl bg-[var(--bg-void)] border border-[var(--border-dim)] space-y-2.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[var(--text-muted)] font-mono">Calibrated Mastery</span>
+                  <span className="font-mono font-bold text-[var(--primary-300)] text-sm">
+                    {skillStates[selectedSkill.id]?.proficiency ?? 0}%
+                  </span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-[var(--bg-surface)] border border-[var(--border-dim)] overflow-hidden">
+                  <div
+                    className="h-full bg-[var(--primary-500)] rounded-full transition-all"
+                    style={{ width: `${skillStates[selectedSkill.id]?.proficiency ?? 0}%` }}
+                  />
+                </div>
+                <div className="text-[10px] text-[var(--text-muted)] font-mono flex justify-between">
+                  <span>Confidence: {Math.round((skillStates[selectedSkill.id]?.confidence ?? 0.5) * 100)}%</span>
+                  <span>{skillStates[selectedSkill.id]?.evidence?.length ?? 0} evidence logged</span>
+                </div>
+              </div>
+
+              {/* Prerequisites Check */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider font-mono">
+                  Prerequisites Check
+                </span>
+                {selectedSkill.prerequisites && selectedSkill.prerequisites.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {selectedSkill.prerequisites.map(p => {
+                      const pProf = skillStates[p]?.proficiency ?? 0;
+                      const isReady = pProf >= 60;
+                      return (
+                        <div
+                          key={p}
+                          className="p-2.5 rounded-lg bg-[var(--bg-void)] border border-[var(--border-dim)] text-xs flex items-center justify-between font-mono"
+                        >
+                          <span className="text-[var(--text-secondary)]">{p}</span>
+                          {isReady ? (
+                            <span className="text-[var(--accent-300)] flex items-center gap-1 text-[10px] font-bold">
+                              <CheckCircle2 size={11} /> {pProf}% Ready
+                            </span>
+                          ) : (
+                            <span className="text-[#f87171] flex items-center gap-1 text-[10px]">
+                              <AlertCircle size={11} /> {pProf}% Required
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-[var(--accent-300)] font-mono p-2.5 rounded-lg bg-[rgba(16,185,129,0.06)] border border-[rgba(16,185,129,0.2)] flex items-center gap-1.5">
+                    <CheckCircle2 size={12} /> Foundational Node (No Prerequisites)
+                  </p>
+                )}
+              </div>
+
+              {/* What this node unlocks */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wider font-mono">
+                  Unlocks Downstream
+                </span>
+                {unlocksMap[selectedSkill.id]?.length ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {unlocksMap[selectedSkill.id].map(un => (
+                      <span key={un} className="tag text-[10px]">
+                        <Unlock size={9} className="text-[var(--accent-300)] inline mr-1" />
+                        {un}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-[var(--text-muted)] font-mono">Terminal specialization node</p>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="pt-4 border-t border-[var(--border-dim)] space-y-2">
+              <button
+                onClick={() => navigate('/practice')}
+                className="btn btn-primary w-full justify-center text-xs py-2.5"
+              >
+                <BookOpen size={13} />
+                <span>Practice in Learning Arena</span>
+              </button>
+              <button
+                onClick={() => setTraceSkillId(selectedSkill.id)}
+                className="btn btn-ghost w-full justify-center text-xs py-2"
+              >
+                <Eye size={13} />
+                <span>Inspect Recommendation Trace</span>
+              </button>
+            </div>
+          </aside>
         )}
       </div>
 
-      {/* Selected Skill Detail Sidebar Drawer */}
-      {selectedSkill && (
-        <div className="w-80 border-l border-slate-800 bg-[#0f172a] p-6 space-y-6 overflow-y-auto animate-in slide-in-from-right duration-200 shadow-2xl">
-          <div className="flex items-start justify-between">
-            <div>
-              <span className="text-xs font-mono text-indigo-400 uppercase tracking-wider">
-                {selectedSkill.category}
-              </span>
-              <h3 className="text-lg font-bold text-white mt-0.5">{selectedSkill.name}</h3>
-            </div>
-            <button
-              onClick={() => setSelectedSkill(null)}
-              className="p-1 rounded text-slate-400 hover:text-white"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* Current Mastery & Evidence */}
-          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-400">Current Mastery</span>
-              <span className="font-mono font-bold text-white text-base">
-                {skillStates[selectedSkill.id]?.proficiency ?? 0}%
-              </span>
-            </div>
-            <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-indigo-500 rounded-full"
-                style={{ width: `${skillStates[selectedSkill.id]?.proficiency ?? 0}%` }}
-              />
-            </div>
-            <div className="text-[11px] text-slate-400 flex justify-between">
-              <span>
-                Confidence:{' '}
-                {Math.round((skillStates[selectedSkill.id]?.confidence ?? 0.3) * 100)}%
-              </span>
-              <span>{skillStates[selectedSkill.id]?.evidence?.length || 0} evidence records</span>
-            </div>
-          </div>
-
-          {/* Direct Prerequisites */}
-          <div className="space-y-2">
-            <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
-              Prerequisites
-            </h4>
-            {selectedSkill.prerequisites && selectedSkill.prerequisites.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {selectedSkill.prerequisites.map(p => (
-                  <span
-                    key={p}
-                    className="px-2.5 py-1 rounded-md text-xs bg-slate-900 border border-slate-800 text-slate-300 font-mono"
-                  >
-                    {p}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-slate-500">None (Foundational Skill)</p>
-            )}
-          </div>
-
-          {/* Action Trigger for Trace */}
-          <button
-            onClick={() => setTraceSkillId(selectedSkill.id)}
-            className="w-full py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-500 transition-all flex items-center justify-center gap-2 shadow-md shadow-indigo-600/30 cursor-pointer"
-          >
-            <Eye className="h-4 w-4" />
-            <span>Inspect Recommendation Trace</span>
-          </button>
-        </div>
-      )}
-
-      {/* Recommendation Trace Modal */}
+      {/* Trace Modal */}
       {traceSkillId && (
         <RecommendationTraceModal
           skillId={traceSkillId}

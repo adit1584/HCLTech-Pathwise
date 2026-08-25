@@ -59,7 +59,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const demoLogin = async () => {
-    await login('alex@demo.pathwise.dev', 'pathwise123');
+    const res = await api.demoLogin();
+    localStorage.setItem('pathwise_token', res.token);
+    setToken(res.token);
+    setUser(res.user);
   };
 
   const register = async (name: string, email: string, password: string) => {

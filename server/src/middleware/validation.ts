@@ -71,7 +71,11 @@ export const feedbackSchema = z.object({
 // ── Assistant Schemas ───────────────────────────────────────
 
 export const assistantChatSchema = z.object({
-  message: z.string().min(1).max(2000),
+  message: z.string().min(1).max(3000),
+  history: z.array(z.object({
+    role: z.enum(['user', 'assistant']),
+    content: z.string(),
+  })).optional(),
 });
 
 // ── What-If Simulator ───────────────────────────────────────

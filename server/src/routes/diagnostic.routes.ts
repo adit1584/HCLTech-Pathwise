@@ -81,12 +81,42 @@ const DIAGNOSTIC_BANK: Record<string, DiagnosticQuestion[]> = {
       correctAnswer: 1, explanation: 'Boolean indexing df[df["age"] > 30] is the standard pandas way to filter rows.',
     },
   ],
-  'feature-engineering': [
+  'javascript': [
     {
-      id: 'fe-1', skillId: 'feature-engineering', skillName: 'Feature Engineering', difficulty: 3,
-      question: 'What is one-hot encoding used for?',
-      options: ['Scaling numerical features', 'Converting categorical variables to numerical', 'Reducing dimensionality', 'Handling missing values'],
-      correctAnswer: 1, explanation: 'One-hot encoding creates binary columns for each category, making categorical data usable by ML algorithms.',
+      id: 'js-1', skillId: 'javascript', skillName: 'JavaScript', difficulty: 2,
+      question: 'What is the difference between let and const in JavaScript?',
+      options: ['let is block-scoped and reassignable; const is block-scoped and immutable binding', 'const is global only', 'let cannot be updated', 'No difference'],
+      correctAnswer: 0, explanation: 'let allows variable reassignment within its block scope, whereas const creates a read-only variable binding.',
+    },
+    {
+      id: 'js-2', skillId: 'javascript', skillName: 'JavaScript', difficulty: 3,
+      question: 'What does Promise.all() do when one of the promises rejects?',
+      options: ['Continues executing others', 'Immediately rejects with the reason of the first rejected promise', 'Returns null', 'Retries automatically'],
+      correctAnswer: 1, explanation: 'Promise.all fails-fast: if any promise in the iterable rejects, the whole returned promise immediately rejects.',
+    },
+  ],
+  'react': [
+    {
+      id: 'react-1', skillId: 'react', skillName: 'React', difficulty: 2,
+      question: 'What is the purpose of useEffect dependency array in React?',
+      options: ['Defines when the effect re-runs based on changed values', 'Increases render speed', 'Sets component styles', 'Caches state values permanently'],
+      correctAnswer: 0, explanation: 'The dependency array tells React to only re-run the effect if one of the listed values has changed between renders.',
+    },
+  ],
+  'data-cleaning': [
+    {
+      id: 'dc-1', skillId: 'data-cleaning', skillName: 'Data Cleaning', difficulty: 2,
+      question: 'Which method in pandas replaces missing NaN values with a specific constant?',
+      options: ['df.dropna()', 'df.fillna()', 'df.replace_null()', 'df.clean()'],
+      correctAnswer: 1, explanation: 'df.fillna(value) fills NA/NaN values using the specified value or imputation method.',
+    },
+  ],
+  'docker': [
+    {
+      id: 'doc-1', skillId: 'docker', skillName: 'Docker & Containers', difficulty: 2,
+      question: 'What is the primary difference between a Docker Image and a Docker Container?',
+      options: ['An image is a static immutable blueprint; a container is a live running instance of an image', 'They are identical', 'A container cannot be stopped', 'An image requires a hypervisor'],
+      correctAnswer: 0, explanation: 'An image is the read-only template with instructions; a container is the runnable instance of an image.',
     },
   ],
 };
@@ -104,48 +134,61 @@ router.post('/start', authMiddleware, async (req: AuthRequest, res: Response) =>
 
     const activeGoal = learner.goals[learner.goals.length - 1];
     const roles = loadRolesData();
-    const targetRole = roles.find((r: any) => r.id === (activeGoal as any).targetRole);
-
-    if (!targetRole) {
-      res.status(400).json({ error: 'Target role not found' });
-      return;
-    }
+    const targetRole = roles.find((r: any) => r.id === (activeGoal as any).targetRole) || {
+      id: 'data-scientist',
+      name: 'Data Scientist',
+      requiredSkills: [
+        { skillId: 'python', importance: 0.9 },
+        { skillId: 'sql', importance: 0.9 },
+        { skillId: 'statistics', importance: 0.8 },
+        { skillId: 'machine-learning', importance: 0.85 },
+      ],
+    };
 
     // Find skills with HIGH uncertainty + HIGH importance
     const skillStates = new Map(
-      (learner.skillStates as any[]).map(s => [s.skillId, s])
+      ((learner.skillStates as any[]) || []).map(s => [s.skillId, s])
     );
 
     const questionsToAsk: DiagnosticQuestion[] = [];
 
     // Sort required skills by (importance * uncertainty), pick top skills
-    const rankedSkills = targetRole.requiredSkills
+    const rankedSkills = ((targetRole as any).requiredSkills || [])
       .map((req: any) => {
         const state = skillStates.get(req.skillId);
         const confidence = state?.confidence ?? 0;
         const uncertainty = 1 - confidence;
         return {
           skillId: req.skillId,
-          importance: req.importance,
-          score: req.importance * uncertainty,
+          importance: req.importance || 0.8,
+          score: (req.importance || 0.8) * uncertainty,
         };
       })
       .sort((a: any, b: any) => b.score - a.score);
 
-    // Pick 2 questions from top uncertain+important skills
+    // Pick 2 questions from top skills
     for (const ranked of rankedSkills) {
       const bank = DIAGNOSTIC_BANK[ranked.skillId];
       if (bank && bank.length > 0) {
-        // Add up to 2 questions per skill
         questionsToAsk.push(...bank.slice(0, 2));
       }
-      if (questionsToAsk.length >= 8) break; // Cap at 8 questions
+      if (questionsToAsk.length >= 8) break;
+    }
+
+    // Fallback: If still empty, supply foundational questions from available banks
+    if (questionsToAsk.length === 0) {
+      for (const bank of Object.values(DIAGNOSTIC_BANK)) {
+        if (bank && bank.length > 0) {
+          questionsToAsk.push(bank[0]);
+        }
+        if (questionsToAsk.length >= 6) break;
+      }
     }
 
     res.json({
       questions: questionsToAsk,
       totalQuestions: questionsToAsk.length,
-      targetRole: targetRole.name,
+      targetRole: (targetRole as any).name || 'Target Role',
     });
   } catch (error) {
     console.error('Diagnostic start error:', error);

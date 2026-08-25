@@ -64,6 +64,11 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  demoLogin: () =>
+    request<{ token: string; user: any }>('/auth/demo', {
+      method: 'POST',
+    }),
+
   getMe: () => request<any>('/auth/me'),
 
   // Profile
@@ -88,6 +93,13 @@ export const api = {
     }),
 
   getRoles: () => request<{ roles: TargetRole[] }>('/goals/roles'),
+
+  // Dynamic role search — any career path
+  createCustomRole: (roleName: string) =>
+    request<{ role: TargetRole }>('/goals/custom-role', {
+      method: 'POST',
+      body: JSON.stringify({ roleName }),
+    }),
 
   // Skills
   getSkills: () => request<{ skills: any[] }>('/skills'),
@@ -170,6 +182,21 @@ export const api = {
     return request<{ resources: LearningResource[] }>(`/resources?${query.toString()}`);
   },
 
+  // AI-Powered Course Recommendations
+  getAIRecommendations: (skillId: string, skillName?: string) => {
+    const query = new URLSearchParams({ skillId });
+    if (skillName) query.append('skillName', skillName);
+    return request<{ recommendations: any[]; skill: string; targetRole: string }>(
+      `/resources/recommendations?${query.toString()}`
+    );
+  },
+
+  getBulkRecommendations: (skillIds: string[]) =>
+    request<{ results: Array<{ skillId: string; skillName: string; recommendations: any[] }>; targetRole: string }>(
+      '/resources/recommendations/bulk',
+      { method: 'POST', body: JSON.stringify({ skillIds }) }
+    ),
+
   // Feedback
   submitFeedback: (text: string) =>
     request<{
@@ -183,16 +210,17 @@ export const api = {
     }),
 
   // AI Assistant
-  askAssistant: (message: string) =>
+  askAssistant: (message: string, history?: Array<{ role: 'user' | 'assistant'; content: string }>) =>
     request<{ answer: string; suggestedActions: string[] }>('/assistant/chat', {
       method: 'POST',
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, history }),
     }),
 
   // What-If Simulator
   simulateWhatIf: (data: { weeklyHours?: number; targetRole?: string; skipSkills?: string[] }) =>
     request<{
       simulatedRole: string;
+      simulatedRoleId?: string;
       simulatedWeeklyHours: number;
       simulatedTotalWeeks: number;
       baseWeeks: number;
@@ -201,6 +229,20 @@ export const api = {
       simulatedItemsCount: number;
       simulatedRoadmap: RoadmapItem[];
     }>('/simulator/what-if', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  applySimulation: (data: { weeklyHours?: number; targetRole?: string; skipSkills?: string[] }) =>
+    request<{
+      success: boolean;
+      recompiled: boolean;
+      weeklyHours: number;
+      targetRole: string;
+      roadmap: RoadmapItem[];
+      totalEstimatedWeeks: number;
+      message: string;
+    }>('/simulator/apply-simulation', {
       method: 'POST',
       body: JSON.stringify(data),
     }),

@@ -52,19 +52,23 @@ router.post('/chat', authMiddleware, async (req: AuthRequest, res: Response) => 
       reason: item.reason,
     }));
 
-    const assistantResponse = await askAssistant(parsed.data.message, {
-      learnerName: learner.name,
-      targetRole,
-      weeklyHours: learner.weeklyHours || 8,
-      currentRoadmap,
-      recentEvents: recentEvents.map(e => ({
-        type: e.type,
-        skillIds: e.skillIds || [],
-        score: e.score,
-        timestamp: e.timestamp,
-      })),
-      skillProficiencies,
-    });
+    const assistantResponse = await askAssistant(
+      parsed.data.message,
+      {
+        learnerName: learner.name,
+        targetRole,
+        weeklyHours: learner.weeklyHours || 8,
+        currentRoadmap,
+        recentEvents: recentEvents.map(e => ({
+          type: e.type,
+          skillIds: e.skillIds || [],
+          score: e.score,
+          timestamp: e.timestamp,
+        })),
+        skillProficiencies,
+      },
+      parsed.data.history || [],
+    );
 
     res.json(assistantResponse);
   } catch (error) {

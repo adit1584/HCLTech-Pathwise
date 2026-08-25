@@ -1,8 +1,10 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './stores/authContext';
+import { ToastProvider } from './components/Toast';
 import { Navbar } from './components/Navbar';
+import { Footer } from './components/Footer';
 import { LandingPage } from './pages/LandingPage';
 import { AuthPage } from './pages/AuthPage';
 import { OnboardingPage } from './pages/OnboardingPage';
@@ -11,7 +13,9 @@ import { DashboardPage } from './pages/DashboardPage';
 import { RoadmapPage } from './pages/RoadmapPage';
 import { SkillGraphPage } from './pages/SkillGraphPage';
 import { PracticePage } from './pages/PracticePage';
-import { SimulatorPage } from './pages/SimulatorPage';
+import { CoursesPage } from './pages/CoursesPage';
+import { ProofPassportPage } from './pages/ProofPassportPage';
+import { WhatIfSimulatorPage } from './pages/WhatIfSimulatorPage';
 
 const queryClient = new QueryClient();
 
@@ -20,9 +24,14 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0b0f17] text-slate-400">
-        <div className="h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mr-2" />
-        Loading Pathwise...
+      <div className="flex min-h-screen items-center justify-center" style={{ background: 'var(--bg-void)', color: 'var(--text-secondary)' }}>
+        <div className="text-center space-y-4">
+          <div className="relative mx-auto w-12 h-12">
+            <div className="absolute inset-0 rounded-full border-2 border-[var(--primary-500)] border-t-transparent animate-spin" />
+            <div className="absolute inset-3 rounded-full border-2 border-[var(--accent-500)] border-t-transparent animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.7s' }} />
+          </div>
+          <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Loading Pathwise…</p>
+        </div>
       </div>
     );
   }
@@ -37,9 +46,10 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 export const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter>
-          <div className="min-h-screen bg-[#0b0f17] text-slate-100 flex flex-col">
+      <ToastProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <div className="min-h-screen text-slate-100 flex flex-col" style={{ background: 'var(--bg-void)' }}>
             <Navbar />
             <main className="flex-1">
               <Routes>
@@ -94,19 +104,45 @@ export const App: React.FC = () => {
                   }
                 />
                 <Route
-                  path="/simulator"
+                  path="/courses"
                   element={
                     <ProtectedRoute>
-                      <SimulatorPage />
+                      <CoursesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/passport"
+                  element={
+                    <ProtectedRoute>
+                      <ProofPassportPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/proof"
+                  element={
+                    <ProtectedRoute>
+                      <ProofPassportPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/what-if"
+                  element={
+                    <ProtectedRoute>
+                      <WhatIfSimulatorPage />
                     </ProtectedRoute>
                   }
                 />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </main>
-          </div>
-        </BrowserRouter>
-      </AuthProvider>
+            <Footer />
+            </div>
+          </BrowserRouter>
+        </AuthProvider>
+      </ToastProvider>
     </QueryClientProvider>
   );
 };

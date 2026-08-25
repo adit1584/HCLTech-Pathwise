@@ -64,6 +64,7 @@ export interface TargetRole {
   description: string;
   estimatedTotalHours: number;
   skillCount: number;
+  requiredSkills?: Array<{ skillId: string; targetProficiency?: number; importance?: number }>;
 }
 
 export interface SkillNode {

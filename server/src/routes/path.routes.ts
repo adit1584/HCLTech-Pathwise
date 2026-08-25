@@ -28,13 +28,8 @@ router.post('/compile', authMiddleware, async (req: AuthRequest, res: Response) 
     }
 
     const activeGoal = learner.goals[learner.goals.length - 1];
-    const roles = loadRolesData();
-    const targetRole = roles.find((r: any) => r.id === (activeGoal as any).targetRole);
-
-    if (!targetRole) {
-      res.status(400).json({ error: `Unknown target role: ${(activeGoal as any).targetRole}` });
-      return;
-    }
+    const { resolveOrSynthesizeRole } = await import('../utils/dynamic-roles.js');
+    const targetRole = await resolveOrSynthesizeRole((activeGoal as any).targetRole);
 
     // Get all skills
     const allSkillDocs = await SkillModel.find({}).lean();
@@ -49,6 +44,23 @@ router.post('/compile', authMiddleware, async (req: AuthRequest, res: Response) 
       difficulty: s.difficulty,
       estimatedHours: s.estimatedHours,
     }));
+
+    // Ensure all target requirements exist in allSkills
+    for (const req of targetRole.requiredSkills) {
+      if (!allSkills.some(s => s.id === req.skillId)) {
+        allSkills.push({
+          id: req.skillId,
+          name: req.skillId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          category: 'Specialization',
+          description: `Core competency for ${targetRole.name}`,
+          prerequisites: [],
+          relatedSkills: [],
+          roleImportance: [{ roleId: targetRole.id, importance: req.importance || 0.8 }],
+          difficulty: 3,
+          estimatedHours: 25,
+        });
+      }
+    }
 
     // Convert learner skill states
     const skillStates: SkillState[] = (learner.skillStates as any[]).map(s => ({
@@ -89,8 +101,28 @@ router.post('/compile', authMiddleware, async (req: AuthRequest, res: Response) 
       qualityScore: r.qualityScore,
       description: r.description,
       source: r.source,
-      url: r.url,
+      url: r.url || `https://www.google.com/search?q=${encodeURIComponent(r.title + ' tutorial course practice')}`,
     }));
+
+    // Ensure fallback resources for all gap skills
+    for (const gap of gaps) {
+      if (!resources.some(r => r.skills.includes(gap.skillId))) {
+        resources.push({
+          id: `res-${gap.skillId}-course`,
+          resourceId: `res-${gap.skillId}-course`,
+          title: `${gap.skillName} Mastery Course`,
+          type: 'COURSE',
+          skills: [gap.skillId],
+          prerequisites: [],
+          difficulty: 2,
+          estimatedHours: 15,
+          qualityScore: 0.9,
+          description: `Interactive learning path and practice exercises for ${gap.skillName}.`,
+          source: 'Google Learning',
+          url: `https://www.google.com/search?q=${encodeURIComponent(gap.skillName + ' complete course tutorial documentation')}`,
+        });
+      }
+    }
 
     // Step 4: Generate roadmap
     const completedSkills = new Set(
@@ -184,13 +216,8 @@ router.post('/recompile', authMiddleware, async (req: AuthRequest, res: Response
     }
 
     const activeGoal = learner.goals[learner.goals.length - 1];
-    const roles = loadRolesData();
-    const targetRole = roles.find((r: any) => r.id === (activeGoal as any).targetRole);
-
-    if (!targetRole) {
-      res.status(400).json({ error: 'Target role not found' });
-      return;
-    }
+    const { resolveOrSynthesizeRole: resolveRole } = await import('../utils/dynamic-roles.js');
+    const targetRole = await resolveRole((activeGoal as any).targetRole);
 
     const allSkillDocs = await SkillModel.find({}).lean();
     const allSkills: Skill[] = allSkillDocs.map(s => ({
@@ -198,6 +225,22 @@ router.post('/recompile', authMiddleware, async (req: AuthRequest, res: Response
       prerequisites: s.prerequisites, relatedSkills: s.relatedSkills,
       roleImportance: s.roleImportance, difficulty: s.difficulty, estimatedHours: s.estimatedHours,
     }));
+
+    for (const req of targetRole.requiredSkills) {
+      if (!allSkills.some(s => s.id === req.skillId)) {
+        allSkills.push({
+          id: req.skillId,
+          name: req.skillId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          category: 'Specialization',
+          description: `Core competency for ${targetRole.name}`,
+          prerequisites: [],
+          relatedSkills: [],
+          roleImportance: [{ roleId: targetRole.id, importance: req.importance || 0.8 }],
+          difficulty: 3,
+          estimatedHours: 25,
+        });
+      }
+    }
 
     const allResources = await ResourceModel.find({}).lean();
     const resources = allResources.map(r => ({
