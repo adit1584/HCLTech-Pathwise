@@ -24,10 +24,28 @@ const app = express();
 
 // ── Middleware ───────────────────────────────────────────────
 
-app.use(cors({
-  origin: config.clientUrl,
-  credentials: true,
-}));
+const allowedOrigins = config.clientUrl
+  ? config.clientUrl.split(',').map(s => s.trim())
+  : ['*'];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (
+        !origin ||
+        allowedOrigins.includes('*') ||
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        origin.includes('localhost')
+      ) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
+    credentials: true,
+  })
+);
 
 app.use(express.json({ limit: '10mb' }));
 
