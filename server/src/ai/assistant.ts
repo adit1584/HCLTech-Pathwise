@@ -54,10 +54,10 @@ export interface ChatHistoryMessage {
 }
 
 const CANDIDATE_MODELS = [
-  config.groqModel || 'openai/gpt-oss-120b',
-  'openai/gpt-oss-120b',
-  'openai/gpt-oss-20b',
-  'qwen/qwen3.6-27b',
+  config.groqModel || 'llama-3.3-70b-versatile',
+  'llama-3.3-70b-versatile',
+  'llama-3.1-8b-instant',
+  'llama3-70b-8192',
 ];
 
 function cleanThinkTags(text: string): string {

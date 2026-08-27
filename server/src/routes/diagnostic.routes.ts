@@ -4,7 +4,9 @@ import { LearnerModel } from '../models/Learner.js';
 import { SkillModel } from '../models/Skill.js';
 import { LearningEventModel } from '../models/LearningEvent.js';
 import { updateFromDiagnostic } from '../engine/mastery-updater.js';
-import { loadRolesData } from '../utils/load-data.js';
+import { resolveOrSynthesizeRole } from '../utils/dynamic-roles.js';
+import Groq from 'groq-sdk';
+import { config } from '../config.js';
 import type { SkillState, DiagnosticQuestion } from '../models/types.js';
 
 // Hard-coded diagnostic questions per skill (for hackathon reliability)
@@ -121,6 +123,170 @@ const DIAGNOSTIC_BANK: Record<string, DiagnosticQuestion[]> = {
   ],
 };
 
+// In-memory cache for AI-generated questions (avoid re-generating per session)
+const aiQuestionCache = new Map<string, DiagnosticQuestion[]>();
+
+/**
+ * Generate diagnostic questions for a skill using Groq AI.
+ * Returns 2 MCQ questions for the given skill.
+ */
+async function generateDiagnosticQuestionsAI(skillId: string, skillName: string): Promise<DiagnosticQuestion[]> {
+  // Check cache first
+  if (aiQuestionCache.has(skillId)) return aiQuestionCache.get(skillId)!;
+
+  try {
+    const apiKey = config.groqApiKey || process.env.GROQ_API_KEY;
+    if (!apiKey) throw new Error('No API key');
+
+    const client = new Groq({ apiKey });
+    const model = config.groqModel || 'openai/gpt-oss-120b';
+
+    const res = await client.chat.completions.create({
+      model,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a technical assessment designer. Generate exactly 2 multiple-choice diagnostic questions for the skill "${skillName}". Each question must test practical understanding. Return ONLY valid JSON array.`,
+        },
+        {
+          role: 'user',
+          content: `Generate 2 MCQ questions for "${skillName}" (id: ${skillId}).
+Return JSON array:
+[
+  {
+    "question": "Question text",
+    "options": ["Option A", "Option B", "Option C", "Option D"],
+    "correctAnswer": 0,
+    "explanation": "Why this is correct",
+    "difficulty": 2
+  }
+]`,
+        },
+      ],
+      temperature: 0.3,
+      max_tokens: 500,
+    });
+
+    const content = res.choices[0]?.message?.content || '';
+    const cleaned = content.replace(/```json/g, '').replace(/```/g, '').trim();
+    const match = cleaned.match(/\[[\s\S]*\]/);
+    const parsed = match ? JSON.parse(match[0]) : JSON.parse(cleaned);
+
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      const questions: DiagnosticQuestion[] = parsed.slice(0, 2).map((q: any, idx: number) => ({
+        id: `ai-${skillId}-${idx + 1}`,
+        skillId,
+        skillName,
+        difficulty: q.difficulty || 2,
+        question: q.question,
+        options: q.options,
+        correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
+        explanation: q.explanation || `Correct answer for ${skillName}.`,
+      }));
+      aiQuestionCache.set(skillId, questions);
+      return questions;
+    }
+  } catch (err) {
+    console.warn(`AI diagnostic generation failed for ${skillId}:`, err);
+  }
+
+  // Deterministic fallback for common skills not in the bank
+  const fallback = buildFallbackQuestions(skillId, skillName);
+  aiQuestionCache.set(skillId, fallback);
+  return fallback;
+}
+
+/**
+ * Build deterministic fallback questions for skills without hardcoded or AI questions.
+ */
+function buildFallbackQuestions(skillId: string, skillName: string): DiagnosticQuestion[] {
+  const lower = skillId.toLowerCase();
+
+  // Pre-built fallbacks for common skills that aren't in DIAGNOSTIC_BANK
+  const builtIn: Record<string, DiagnosticQuestion[]> = {
+    'html-css': [
+      { id: 'html-1', skillId: 'html-css', skillName: 'HTML & CSS', difficulty: 2, question: 'Which CSS property is used to make a flex container?', options: ['display: grid', 'display: flex', 'position: flex', 'float: flex'], correctAnswer: 1, explanation: 'display: flex creates a flex container for its children.' },
+      { id: 'html-2', skillId: 'html-css', skillName: 'HTML & CSS', difficulty: 2, question: 'What does the <semantic> tag represent in HTML5?', options: ['It does not exist', 'A styled div', 'Meaningful markup like <article>, <nav>, <section>', 'A script container'], correctAnswer: 2, explanation: 'HTML5 semantic elements provide meaningful structure like <article>, <nav>, <section>.' },
+    ],
+    'typescript': [
+      { id: 'ts-1', skillId: 'typescript', skillName: 'TypeScript', difficulty: 2, question: 'What is the primary benefit of TypeScript over JavaScript?', options: ['Faster runtime performance', 'Static type checking at compile time', 'Smaller bundle size', 'Built-in database support'], correctAnswer: 1, explanation: 'TypeScript adds static type checking which catches type errors during development.' },
+      { id: 'ts-2', skillId: 'typescript', skillName: 'TypeScript', difficulty: 3, question: 'What does "interface" do in TypeScript?', options: ['Creates a new class', 'Defines a type contract for object shapes', 'Imports external modules', 'Declares a variable'], correctAnswer: 1, explanation: 'Interfaces define the shape/contract that an object must conform to.' },
+    ],
+    'nodejs': [
+      { id: 'node-1', skillId: 'nodejs', skillName: 'Node.js', difficulty: 2, question: 'What is the event loop in Node.js?', options: ['A for-loop that iterates events', 'A mechanism that handles async callbacks and I/O non-blockingly', 'A DOM rendering engine', 'A package manager'], correctAnswer: 1, explanation: 'The event loop is what allows Node.js to perform non-blocking I/O operations.' },
+      { id: 'node-2', skillId: 'nodejs', skillName: 'Node.js', difficulty: 2, question: 'Which module is used to create an HTTP server in Node.js?', options: ['fs', 'http', 'path', 'url'], correctAnswer: 1, explanation: 'The http module provides utilities for creating HTTP servers and clients.' },
+    ],
+    'nosql': [
+      { id: 'nosql-1', skillId: 'nosql', skillName: 'NoSQL Databases', difficulty: 2, question: 'Which is a key advantage of NoSQL over relational databases?', options: ['Enforces strict schemas', 'Horizontal scalability and flexible schemas', 'ACID compliance by default', 'SQL query support'], correctAnswer: 1, explanation: 'NoSQL databases excel at horizontal scaling and handling unstructured/semi-structured data.' },
+    ],
+    'api-design': [
+      { id: 'api-1', skillId: 'api-design', skillName: 'API Design', difficulty: 2, question: 'What HTTP method is typically used to update an existing resource?', options: ['GET', 'POST', 'PUT', 'DELETE'], correctAnswer: 2, explanation: 'PUT is used to update/replace an existing resource at the given URI.' },
+      { id: 'api-2', skillId: 'api-design', skillName: 'API Design', difficulty: 2, question: 'What does REST stand for?', options: ['Rapid Endpoint Service Technology', 'Representational State Transfer', 'Remote Execution Server Tool', 'Resource Encoding Standard Type'], correctAnswer: 1, explanation: 'REST = Representational State Transfer, an architectural style for distributed systems.' },
+    ],
+    'deployment': [
+      { id: 'dep-1', skillId: 'deployment', skillName: 'Deployment', difficulty: 2, question: 'What does CI/CD stand for?', options: ['Continuous Integration / Continuous Deployment', 'Code Implementation / Code Delivery', 'Central Integration / Central Distribution', 'Container Isolation / Container Distribution'], correctAnswer: 0, explanation: 'CI/CD automates building, testing (CI) and deploying (CD) code changes.' },
+    ],
+    'testing': [
+      { id: 'test-1', skillId: 'testing', skillName: 'Testing', difficulty: 2, question: 'What is a unit test?', options: ['Testing the entire application end-to-end', 'Testing a single function or component in isolation', 'Manual browser testing', 'Load testing under high traffic'], correctAnswer: 1, explanation: 'Unit tests verify individual functions/components in isolation from the rest of the system.' },
+      { id: 'test-2', skillId: 'testing', skillName: 'Testing', difficulty: 2, question: 'What does TDD stand for?', options: ['Test-Driven Development', 'Type-Driven Design', 'Total Data Debugging', 'Team Development Docs'], correctAnswer: 0, explanation: 'TDD means writing tests before writing the implementation code.' },
+    ],
+    'git': [
+      { id: 'git-1', skillId: 'git', skillName: 'Git & Version Control', difficulty: 2, question: 'What does "git merge" do?', options: ['Deletes a branch', 'Combines changes from one branch into another', 'Creates a new repository', 'Reverts all changes'], correctAnswer: 1, explanation: 'git merge integrates changes from one branch into the current branch.' },
+    ],
+    'excel': [
+      { id: 'excel-1', skillId: 'excel', skillName: 'Excel & Spreadsheets', difficulty: 2, question: 'What is a Pivot Table used for?', options: ['Creating charts only', 'Summarizing and analyzing large datasets by grouping and aggregating', 'Writing macros', 'Formatting cells'], correctAnswer: 1, explanation: 'Pivot Tables let you summarize, sort, reorganize, group, count, total, or average data.' },
+    ],
+    'deep-learning': [
+      { id: 'dl-1', skillId: 'deep-learning', skillName: 'Deep Learning', difficulty: 3, question: 'What is backpropagation?', options: ['A data preprocessing step', 'An algorithm that computes gradients to update neural network weights', 'A method to split datasets', 'A type of activation function'], correctAnswer: 1, explanation: 'Backpropagation computes the gradient of the loss function with respect to each weight by the chain rule.' },
+    ],
+    'nlp': [
+      { id: 'nlp-1', skillId: 'nlp', skillName: 'NLP', difficulty: 3, question: 'What is tokenization in NLP?', options: ['Encrypting text data', 'Breaking text into smaller units like words or subwords', 'Removing stop words', 'Translating between languages'], correctAnswer: 1, explanation: 'Tokenization splits text into tokens (words, subwords, or characters) for processing.' },
+    ],
+    'probability': [
+      { id: 'prob-1', skillId: 'probability', skillName: 'Probability', difficulty: 2, question: "What does Bayes' theorem relate?", options: ['Mean and median', 'Prior probability, likelihood, and posterior probability', 'Standard deviation and variance', 'Population and sample'], correctAnswer: 1, explanation: "Bayes' theorem describes how to update the probability of a hypothesis given new evidence." },
+    ],
+    'feature-engineering': [
+      { id: 'fe-1', skillId: 'feature-engineering', skillName: 'Feature Engineering', difficulty: 2, question: 'What is one-hot encoding used for?', options: ['Normalizing numerical features', 'Converting categorical variables into binary vectors', 'Reducing dimensionality', 'Filling missing values'], correctAnswer: 1, explanation: 'One-hot encoding creates binary columns for each category of a categorical variable.' },
+    ],
+    'eda': [
+      { id: 'eda-1', skillId: 'eda', skillName: 'Exploratory Data Analysis', difficulty: 2, question: 'What is the primary goal of EDA?', options: ['Building production models', 'Understanding data distributions, patterns, and anomalies', 'Deploying applications', 'Writing unit tests'], correctAnswer: 1, explanation: 'EDA involves examining data to understand its main characteristics, often using visualization.' },
+    ],
+    'data-visualization': [
+      { id: 'dv-1', skillId: 'data-visualization', skillName: 'Data Visualization', difficulty: 2, question: 'Which chart type is best for showing trends over time?', options: ['Pie chart', 'Line chart', 'Tree map', 'Scatter plot'], correctAnswer: 1, explanation: 'Line charts are ideal for displaying trends and changes over a continuous time period.' },
+    ],
+    'model-evaluation': [
+      { id: 'me-1', skillId: 'model-evaluation', skillName: 'Model Evaluation', difficulty: 2, question: 'What does the F1 score balance?', options: ['Accuracy and speed', 'Precision and recall', 'Bias and variance', 'Training and test loss'], correctAnswer: 1, explanation: 'F1 score is the harmonic mean of precision and recall, balancing both metrics.' },
+    ],
+    'regression': [
+      { id: 'reg-1', skillId: 'regression', skillName: 'Regression', difficulty: 2, question: 'What does R² (R-squared) measure?', options: ['The slope of the regression line', 'The proportion of variance in the dependent variable explained by the model', 'The number of features', 'The learning rate'], correctAnswer: 1, explanation: 'R² indicates how well the model explains the variability of the target variable.' },
+    ],
+    'classification': [
+      { id: 'cls-1', skillId: 'classification', skillName: 'Classification', difficulty: 2, question: 'What is a confusion matrix?', options: ['A matrix of feature correlations', 'A table showing true/false positives and negatives for classification results', 'A weight initialization method', 'A data augmentation technique'], correctAnswer: 1, explanation: 'A confusion matrix shows TP, TN, FP, FN counts to evaluate classification performance.' },
+    ],
+  };
+
+  if (builtIn[skillId]) return builtIn[skillId];
+
+  // Generic self-assessment fallback
+  return [
+    {
+      id: `gen-${skillId}-1`,
+      skillId,
+      skillName,
+      difficulty: 2,
+      question: `Which statement best describes a core concept of ${skillName}?`,
+      options: [
+        `${skillName} is primarily about understanding fundamental principles and applying them practically`,
+        `${skillName} requires no prior knowledge of any related field`,
+        `${skillName} is only relevant for academic research`,
+        `${skillName} cannot be learned through hands-on practice`,
+      ],
+      correctAnswer: 0,
+      explanation: `Understanding fundamentals and practical application is key to mastering ${skillName}.`,
+    },
+  ];
+}
+
 const router = Router();
 
 // POST /api/diagnostic/start — Generate personalized diagnostic
@@ -133,17 +299,7 @@ router.post('/start', authMiddleware, async (req: AuthRequest, res: Response) =>
     }
 
     const activeGoal = learner.goals[learner.goals.length - 1];
-    const roles = loadRolesData();
-    const targetRole = roles.find((r: any) => r.id === (activeGoal as any).targetRole) || {
-      id: 'data-scientist',
-      name: 'Data Scientist',
-      requiredSkills: [
-        { skillId: 'python', importance: 0.9 },
-        { skillId: 'sql', importance: 0.9 },
-        { skillId: 'statistics', importance: 0.8 },
-        { skillId: 'machine-learning', importance: 0.85 },
-      ],
-    };
+    const targetRole = await resolveOrSynthesizeRole((activeGoal as any).targetRole);
 
     // Find skills with HIGH uncertainty + HIGH importance
     const skillStates = new Map(
@@ -166,11 +322,20 @@ router.post('/start', authMiddleware, async (req: AuthRequest, res: Response) =>
       })
       .sort((a: any, b: any) => b.score - a.score);
 
-    // Pick 2 questions from top skills
+    // Pick 2 questions from top skills — try hardcoded bank first, then AI/fallback
     for (const ranked of rankedSkills) {
       const bank = DIAGNOSTIC_BANK[ranked.skillId];
       if (bank && bank.length > 0) {
         questionsToAsk.push(...bank.slice(0, 2));
+      } else {
+        // No hardcoded questions — generate dynamically
+        const skillName = ranked.skillId.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+        try {
+          const dynamicQs = await generateDiagnosticQuestionsAI(ranked.skillId, skillName);
+          questionsToAsk.push(...dynamicQs.slice(0, 2));
+        } catch {
+          // Skip this skill if generation fails
+        }
       }
       if (questionsToAsk.length >= 8) break;
     }
@@ -218,11 +383,18 @@ router.post('/answer', authMiddleware, async (req: AuthRequest, res: Response) =
     for (const answer of answers) {
       const { questionId, selectedAnswer } = answer;
 
-      // Find the question across all banks
+      // Find the question across hardcoded banks + AI-generated cache
       let question: DiagnosticQuestion | undefined;
       for (const bank of Object.values(DIAGNOSTIC_BANK)) {
         question = bank.find(q => q.id === questionId);
         if (question) break;
+      }
+      // Also search AI-generated question cache
+      if (!question) {
+        for (const cachedQs of aiQuestionCache.values()) {
+          question = cachedQs.find(q => q.id === questionId);
+          if (question) break;
+        }
       }
 
       if (!question) continue;
@@ -272,7 +444,7 @@ router.post('/answer', authMiddleware, async (req: AuthRequest, res: Response) =
     res.json({
       results: changes.map(c => ({
         skillId: c.skillId,
-        skillName: DIAGNOSTIC_BANK[c.skillId]?.[0]?.skillName ?? c.skillId,
+        skillName: DIAGNOSTIC_BANK[c.skillId]?.[0]?.skillName ?? aiQuestionCache.get(c.skillId)?.[0]?.skillName ?? c.skillId.replace(/-/g, ' ').replace(/\b\w/g, (ch: string) => ch.toUpperCase()),
         before: c.before,
         after: c.after,
         confidenceBefore: c.confidenceBefore,

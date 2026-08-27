@@ -29,9 +29,58 @@ router.post('/what-if', authMiddleware, async (req: AuthRequest, res: Response) 
     }
 
     const activeGoal = learner.goals?.[learner.goals.length - 1];
-    const targetRoleId = parsed.data.targetRole || (activeGoal as any)?.targetRole || 'data-scientist';
+    const primaryRoleId = parsed.data.targetRole || (activeGoal as any)?.targetRole || 'data-scientist';
+    const secondaryRoleId = parsed.data.secondaryRole;
+
     const { resolveOrSynthesizeRole } = await import('../utils/dynamic-roles.js');
-    const targetRole = await resolveOrSynthesizeRole(targetRoleId);
+    const primaryRole = await resolveOrSynthesizeRole(primaryRoleId);
+
+    let targetRole = primaryRole;
+    let isDualRole = false;
+    let secondaryRoleName: string | undefined;
+    let sharedSkills: string[] = [];
+    let synergyWeeksSaved = 0;
+
+    if (secondaryRoleId && secondaryRoleId !== primaryRoleId) {
+      isDualRole = true;
+      const secondaryRole = await resolveOrSynthesizeRole(secondaryRoleId);
+      secondaryRoleName = secondaryRole.name;
+
+      // Identify shared skills across both tracks
+      const secSkillMap = new Map((secondaryRole.requiredSkills || []).map(s => [s.skillId, s]));
+      const mergedMap = new Map<string, { skillId: string; targetProficiency: number; importance: number }>();
+
+      for (const req of (primaryRole.requiredSkills || [])) {
+        const secReq = secSkillMap.get(req.skillId);
+        if (secReq) {
+          sharedSkills.push(req.skillId);
+          mergedMap.set(req.skillId, {
+            skillId: req.skillId,
+            targetProficiency: Math.max(req.targetProficiency || 75, secReq.targetProficiency || 75),
+            importance: Math.max(req.importance || 0.8, secReq.importance || 0.8),
+          });
+        } else {
+          mergedMap.set(req.skillId, req);
+        }
+      }
+
+      for (const req of (secondaryRole.requiredSkills || [])) {
+        if (!mergedMap.has(req.skillId)) {
+          mergedMap.set(req.skillId, req);
+        }
+      }
+
+      // Shared skills save learning time via skill transfer
+      synergyWeeksSaved = Math.max(1, Math.round(sharedSkills.length * 1.5));
+
+      targetRole = {
+        id: `${primaryRole.id}--${secondaryRole.id}`,
+        name: `${primaryRole.name} & ${secondaryRole.name}`,
+        description: `Dual-Track Hybrid Career combining ${primaryRole.name} and ${secondaryRole.name}`,
+        requiredSkills: Array.from(mergedMap.values()),
+        estimatedTotalHours: (primaryRole.estimatedTotalHours || 120) + Math.round((secondaryRole.estimatedTotalHours || 100) * 0.6),
+      };
+    }
 
     const weeklyHours = parsed.data.weeklyHours || learner.weeklyHours || 8;
     const skipSkills = new Set(parsed.data.skipSkills || []);
@@ -116,12 +165,17 @@ router.post('/what-if', authMiddleware, async (req: AuthRequest, res: Response) 
     });
 
     // Compare with current base estimate
-    const baseWeeks = Math.ceil(480 / (learner.weeklyHours || 8)); // approximate baseline
+    const baseWeeks = Math.ceil(480 / (learner.weeklyHours || 8));
     const timeSavedWeeks = Math.max(0, baseWeeks - roadmap.totalEstimatedWeeks);
 
     res.json({
       simulatedRole: targetRole.name,
       simulatedRoleId: targetRole.id,
+      isDualRole,
+      primaryRoleName: primaryRole.name,
+      secondaryRoleName,
+      sharedSkills,
+      synergyWeeksSaved,
       simulatedWeeklyHours: weeklyHours,
       simulatedTotalWeeks: roadmap.totalEstimatedWeeks,
       baseWeeks,
@@ -139,7 +193,7 @@ router.post('/what-if', authMiddleware, async (req: AuthRequest, res: Response) 
 // POST /api/simulator/apply-simulation — Persist simulated configuration to active learner plan
 router.post('/apply-simulation', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const { targetRole: targetRoleIdInput, weeklyHours, skipSkills } = req.body;
+    const { targetRole: targetRoleIdInput, secondaryRole: secondaryRoleIdInput, weeklyHours, skipSkills } = req.body;
 
     const learner = await LearnerModel.findById(req.userId);
     if (!learner) {
@@ -152,19 +206,57 @@ router.post('/apply-simulation', authMiddleware, async (req: AuthRequest, res: R
     }
 
     const activeGoal = learner.goals?.[learner.goals.length - 1];
-    const targetRoleId = targetRoleIdInput || (activeGoal as any)?.targetRole || 'data-scientist';
+    const primaryRoleId = targetRoleIdInput || (activeGoal as any)?.targetRole || 'data-scientist';
+    const secondaryRoleId = secondaryRoleIdInput;
 
-    if (targetRoleIdInput && typeof targetRoleIdInput === 'string') {
-      if (!learner.goals || learner.goals.length === 0) {
-        learner.goals = [{
-          id: `goal-${Date.now()}`,
-          targetRole: targetRoleIdInput,
-          targetDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-          createdAt: new Date(),
-        }] as any;
-      } else {
-        (learner.goals[learner.goals.length - 1] as any).targetRole = targetRoleIdInput;
+    const { resolveOrSynthesizeRole } = await import('../utils/dynamic-roles.js');
+    const primaryRole = await resolveOrSynthesizeRole(primaryRoleId);
+
+    let targetRole = primaryRole;
+
+    if (secondaryRoleId && secondaryRoleId !== primaryRoleId) {
+      const secondaryRole = await resolveOrSynthesizeRole(secondaryRoleId);
+      const secSkillMap = new Map((secondaryRole.requiredSkills || []).map(s => [s.skillId, s]));
+      const mergedMap = new Map<string, { skillId: string; targetProficiency: number; importance: number }>();
+
+      for (const req of (primaryRole.requiredSkills || [])) {
+        const secReq = secSkillMap.get(req.skillId);
+        if (secReq) {
+          mergedMap.set(req.skillId, {
+            skillId: req.skillId,
+            targetProficiency: Math.max(req.targetProficiency || 75, secReq.targetProficiency || 75),
+            importance: Math.max(req.importance || 0.8, secReq.importance || 0.8),
+          });
+        } else {
+          mergedMap.set(req.skillId, req);
+        }
       }
+
+      for (const req of (secondaryRole.requiredSkills || [])) {
+        if (!mergedMap.has(req.skillId)) {
+          mergedMap.set(req.skillId, req);
+        }
+      }
+
+      targetRole = {
+        id: `${primaryRole.id}--${secondaryRole.id}`,
+        name: `${primaryRole.name} & ${secondaryRole.name}`,
+        description: `Dual-Track Hybrid Career combining ${primaryRole.name} and ${secondaryRole.name}`,
+        requiredSkills: Array.from(mergedMap.values()),
+        estimatedTotalHours: (primaryRole.estimatedTotalHours || 120) + Math.round((secondaryRole.estimatedTotalHours || 100) * 0.6),
+      };
+    }
+
+    // Save target role in goal
+    if (!learner.goals || learner.goals.length === 0) {
+      learner.goals = [{
+        id: `goal-${Date.now()}`,
+        targetRole: targetRole.id,
+        targetDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+        createdAt: new Date(),
+      }] as any;
+    } else {
+      (learner.goals[learner.goals.length - 1] as any).targetRole = targetRole.id;
     }
 
     // Apply skipSkills if any
@@ -185,9 +277,6 @@ router.post('/apply-simulation', authMiddleware, async (req: AuthRequest, res: R
         }
       }
     }
-
-    const { resolveOrSynthesizeRole } = await import('../utils/dynamic-roles.js');
-    const targetRole = await resolveOrSynthesizeRole(targetRoleId);
 
     const allSkillDocs = await SkillModel.find({}).lean();
     const allSkills: Skill[] = allSkillDocs.map(s => ({
@@ -265,7 +354,7 @@ router.post('/apply-simulation', authMiddleware, async (req: AuthRequest, res: R
       targetRole: targetRole.name,
       roadmap: roadmap.items,
       totalEstimatedWeeks: roadmap.totalEstimatedWeeks,
-      message: `Successfully applied ${learner.weeklyHours}h/week velocity to your active roadmap.`,
+      message: `Successfully applied plan for ${targetRole.name} at ${learner.weeklyHours}h/week to your active roadmap.`,
     });
   } catch (error) {
     console.error('Apply simulation error:', error);

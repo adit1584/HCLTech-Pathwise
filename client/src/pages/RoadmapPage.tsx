@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import type { RoadmapItem, RecompilationResult } from '../types';
@@ -11,122 +11,83 @@ import {
   Loader2,
   Unlock,
   ChevronRight,
-  ExternalLink,
   BookOpen,
   Trophy,
   Zap,
   Code2,
   Flame,
   ArrowRight,
-  Video,
-  FileText,
   HelpCircle,
   FolderGit2,
   RotateCcw,
+  Sparkles,
+  ExternalLink,
 } from 'lucide-react';
 import { RecommendationTraceModal } from '../components/RecommendationTraceModal';
 import { RecompilationBanner } from '../components/RecompilationBanner';
 import { MilestoneAssessmentModal } from '../components/MilestoneAssessmentModal';
 import { ProjectAssessmentModal } from '../components/ProjectAssessmentModal';
+import { CelebrationModal } from '../components/CelebrationModal';
 import { useToast } from '../components/Toast';
+import { playVictoryChime, triggerConfetti } from '../utils/celebration';
 
 const TYPE_STYLES: Record<string, { bg: string; border: string; text: string; label: string; icon: React.ReactNode }> = {
-  PROJECT:    { bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)', text: 'var(--primary-300)', label: 'Project', icon: <Trophy size={10} /> },
-  ASSESSMENT: { bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)', text: 'var(--accent-300)', label: 'Assessment', icon: <Zap size={10} /> },
-  COURSE:     { bg: 'rgba(14,165,233,0.12)', border: 'rgba(14,165,233,0.3)', text: 'var(--cyan-300)', label: 'Course', icon: <BookOpen size={10} /> },
-  RESOURCE:   { bg: 'rgba(14,165,233,0.1)',  border: 'rgba(14,165,233,0.25)', text: 'var(--cyan-300)', label: 'Resource', icon: <BookOpen size={10} /> },
-  PRACTICE:   { bg: 'rgba(16,185,129,0.1)',  border: 'rgba(16,185,129,0.25)', text: 'var(--accent-300)', label: 'Practice', icon: <Code2 size={10} /> },
+  PROJECT:    { bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)', text: 'var(--primary-300)', label: 'Capstone Project', icon: <Trophy size={11} /> },
+  ASSESSMENT: { bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)', text: 'var(--accent-300)', label: 'Milestone Assessment', icon: <Zap size={11} /> },
+  COURSE:     { bg: 'rgba(14,165,233,0.12)', border: 'rgba(14,165,233,0.3)', text: 'var(--cyan-300)', label: 'Core Skill Module', icon: <BookOpen size={11} /> },
+  RESOURCE:   { bg: 'rgba(14,165,233,0.1)',  border: 'rgba(14,165,233,0.25)', text: 'var(--cyan-300)', label: 'Skill Module', icon: <BookOpen size={11} /> },
+  PRACTICE:   { bg: 'rgba(16,185,129,0.1)',  border: 'rgba(16,185,129,0.25)', text: 'var(--accent-300)', label: 'Coding Lab', icon: <Code2 size={11} /> },
 };
 
-const CANONICAL_VIDEOS: Record<string, { title: string; url: string; creator: string }> = {
-  python: { title: 'CS50 Python Full Course', url: 'https://www.youtube.com/watch?v=nLRL_NcnK-4', creator: 'Harvard CS50' },
-  javascript: { title: 'JavaScript Full Course for Beginners', url: 'https://www.youtube.com/watch?v=PkZNo7MFNFg', creator: 'freeCodeCamp' },
-  typescript: { title: 'TypeScript Full Tutorial', url: 'https://www.youtube.com/watch?v=BwuLxPH8IDs', creator: 'freeCodeCamp' },
-  react: { title: 'React 19 Full Course', url: 'https://www.youtube.com/watch?v=2OTq15A5s0Y', creator: 'freeCodeCamp' },
-  sql: { title: 'SQL Full Database Course', url: 'https://www.youtube.com/watch?v=HXV3zeRR3h4', creator: 'freeCodeCamp / Mike Dane' },
-  mongodb: { title: 'MongoDB Full Course', url: 'https://www.youtube.com/watch?v=ExcRbA7fy_A', creator: 'freeCodeCamp' },
-  nosql: { title: 'MongoDB Full Course', url: 'https://www.youtube.com/watch?v=ExcRbA7fy_A', creator: 'freeCodeCamp' },
-  'machine-learning': { title: 'Machine Learning Specialization', url: 'https://www.youtube.com/watch?v=jGwO_UgTS7I', creator: 'Stanford / Andrew Ng' },
-  'deep-learning': { title: 'Neural Networks: Zero to Hero', url: 'https://www.youtube.com/watch?v=VMj-3S1tku0', creator: 'Andrej Karpathy' },
-  pandas: { title: 'Pandas & Python for Data Analysis', url: 'https://www.youtube.com/watch?v=r-uOLxNrNk8', creator: 'freeCodeCamp / Keith Galli' },
-  numpy: { title: 'NumPy Full Tutorial', url: 'https://www.youtube.com/watch?v=QUT1VHiLmmI', creator: 'freeCodeCamp / Keith Galli' },
-  'html-css': { title: 'HTML & CSS Full Course - Beginner to Pro', url: 'https://www.youtube.com/watch?v=G3e-cpL7ofc', creator: 'SuperSimpleDev' },
-  css: { title: 'CSS Full Course for Beginners', url: 'https://www.youtube.com/watch?v=1Rs2ND1ryYc', creator: 'freeCodeCamp' },
-  html: { title: 'HTML Full Course for Beginners', url: 'https://www.youtube.com/watch?v=kUMe1FH4CHE', creator: 'freeCodeCamp' },
-  nodejs: { title: 'Node.js and Express.js - Full Course', url: 'https://www.youtube.com/watch?v=Oe421EPjeBE', creator: 'freeCodeCamp / John Smilga' },
-  node: { title: 'Node.js and Express.js - Full Course', url: 'https://www.youtube.com/watch?v=Oe421EPjeBE', creator: 'freeCodeCamp' },
-  git: { title: 'Git and GitHub for Beginners', url: 'https://www.youtube.com/watch?v=RGOj5yH7evk', creator: 'freeCodeCamp' },
-  docker: { title: 'Docker Tutorial for Beginners', url: 'https://www.youtube.com/watch?v=fqMOX6JJhGo', creator: 'TechWorld with Nana' },
-  nlp: { title: 'NLP & Transformers Illustrated', url: 'https://www.youtube.com/watch?v=zxQyTK8quyY', creator: 'StatQuest with Josh Starmer' },
-  statistics: { title: 'Statistics Fundamentals Playlist', url: 'https://www.youtube.com/watch?v=qBigTkBLU6g', creator: 'StatQuest with Josh Starmer' },
-  probability: { title: 'Probability and Statistics', url: 'https://www.youtube.com/watch?v=qBigTkBLU6g', creator: 'StatQuest' },
-  eda: { title: 'Exploratory Data Analysis with Python', url: 'https://www.youtube.com/watch?v=liv71fGdrpE', creator: 'freeCodeCamp' },
-  'feature-engineering': { title: 'Feature Engineering for Machine Learning', url: 'https://www.youtube.com/watch?v=6WDFfaYtN6D', creator: 'StatQuest' },
-  'api-design': { title: 'REST APIs & System Design', url: 'https://www.youtube.com/watch?v=-MTSQjw5DrM', creator: 'freeCodeCamp' },
-  testing: { title: 'Pytest & Automated Testing Tutorial', url: 'https://www.youtube.com/watch?v=YbpKMIUjvK8', creator: 'freeCodeCamp' },
-  java: { title: 'Java Full Course for Beginners', url: 'https://www.youtube.com/watch?v=A74TOX803D0', creator: 'freeCodeCamp' },
-  cpp: { title: 'C++ Full Course for Beginners', url: 'https://www.youtube.com/watch?v=vLnPwxZdW4Y', creator: 'freeCodeCamp' },
-  go: { title: 'Go / Golang Tutorial for Beginners', url: 'https://www.youtube.com/watch?v=un6ZyFkqFJU', creator: 'TechWorld with Nana' },
-  rust: { title: 'Rust Programming Course for Beginners', url: 'https://www.youtube.com/watch?v=MsocPEZBd-M', creator: 'freeCodeCamp' },
-  kubernetes: { title: 'Kubernetes Tutorial for Beginners', url: 'https://www.youtube.com/watch?v=X48VuDVv0do', creator: 'TechWorld with Nana' },
-  aws: { title: 'AWS Certified Cloud Practitioner', url: 'https://www.youtube.com/watch?v=SOTamWNgDKc', creator: 'freeCodeCamp' },
-  flutter: { title: 'Flutter Course for Beginners', url: 'https://www.youtube.com/watch?v=VPvVD8t02U8', creator: 'freeCodeCamp' },
+const CANONICAL_SKILL_URLS: Record<string, { url: string; provider: string }> = {
+  python: { url: 'https://cs50.harvard.edu/python/', provider: 'Harvard CS50' },
+  javascript: { url: 'https://javascript.info/', provider: 'JavaScript.info' },
+  typescript: { url: 'https://www.typescriptlang.org/docs/handbook/intro.html', provider: 'TypeScript Official' },
+  react: { url: 'https://react.dev/learn', provider: 'React.dev' },
+  sql: { url: 'https://mode.com/sql-tutorial/', provider: 'Mode Analytics' },
+  nosql: { url: 'https://learn.mongodb.com/', provider: 'MongoDB University' },
+  mongodb: { url: 'https://learn.mongodb.com/', provider: 'MongoDB University' },
+  'machine-learning': { url: 'https://www.coursera.org/specializations/machine-learning-introduction', provider: 'Stanford / Andrew Ng' },
+  'deep-learning': { url: 'https://course.fast.ai/', provider: 'fast.ai' },
+  pandas: { url: 'https://www.kaggle.com/learn/pandas', provider: 'Kaggle Learn' },
+  numpy: { url: 'https://numpy.org/doc/stable/user/quickstart.html', provider: 'NumPy Official' },
+  'html-css': { url: 'https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content', provider: 'MDN Web Docs' },
+  css: { url: 'https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/CSS_layout', provider: 'MDN Web Docs' },
+  html: { url: 'https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content', provider: 'MDN Web Docs' },
+  nodejs: { url: 'https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Server-side/Express_Nodejs', provider: 'MDN Web Docs' },
+  node: { url: 'https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Server-side/Express_Nodejs', provider: 'MDN Web Docs' },
+  git: { url: 'https://git-scm.com/book/en/v2', provider: 'Pro Git Book' },
+  docker: { url: 'https://docs.docker.com/get-started/', provider: 'Docker Official' },
+  nlp: { url: 'https://huggingface.co/learn/nlp-course', provider: 'Hugging Face' },
+  statistics: { url: 'https://www.khanacademy.org/math/statistics-probability', provider: 'Khan Academy' },
+  probability: { url: 'https://ocw.mit.edu/courses/18-05-introduction-to-probability-and-statistics-spring-2022/', provider: 'MIT OpenCourseWare' },
+  eda: { url: 'https://www.kaggle.com/c/titanic', provider: 'Kaggle' },
+  'feature-engineering': { url: 'https://www.kaggle.com/learn/feature-engineering', provider: 'Kaggle Learn' },
+  'api-design': { url: 'https://github.com/donnemartin/system-design-primer', provider: 'System Design Primer' },
+  testing: { url: 'https://docs.pytest.org/en/stable/getting-started.html', provider: 'Pytest Official' },
+  linux: { url: 'https://linuxjourney.com/', provider: 'Linux Journey' },
+  networking: { url: 'https://www.freecodecamp.org/news/free-computer-networking-course/', provider: 'freeCodeCamp' },
+  'cybersecurity-fundamentals': { url: 'https://www.coursera.org/professional-certificates/google-cybersecurity', provider: 'Google' },
+  'ethical-hacking': { url: 'https://www.hackthebox.com/hacker', provider: 'Hack The Box' },
+  solidity: { url: 'https://docs.soliditylang.org/en/latest/', provider: 'Solidity Docs' },
+  'smart-contracts': { url: 'https://ethereum.org/en/developers/docs/smart-contracts/', provider: 'Ethereum Foundation' },
+  'system-design': { url: 'https://github.com/donnemartin/system-design-primer', provider: 'System Design Primer' },
+  kubernetes: { url: 'https://kubernetes.io/docs/tutorials/', provider: 'Kubernetes Official' },
+  'aws-cloud': { url: 'https://aws.amazon.com/training/', provider: 'AWS Training' },
+  graphql: { url: 'https://graphql.org/learn/', provider: 'GraphQL.org' },
 };
 
-function getCanonicalVideo(title: string, skillIds?: string[]): { title: string; url: string; creator: string } | null {
+function getCanonicalUrl(title: string, skillIds?: string[]): { url: string; provider: string } {
   const primarySkill = (skillIds?.[0] || '').toLowerCase();
-  for (const [key, val] of Object.entries(CANONICAL_VIDEOS)) {
-    if (primarySkill.includes(key) || key.includes(primarySkill) || title.toLowerCase().includes(key)) {
+  for (const [key, val] of Object.entries(CANONICAL_SKILL_URLS)) {
+    if (primarySkill === key || primarySkill.includes(key) || key.includes(primarySkill) || title.toLowerCase().includes(key)) {
       return val;
     }
   }
-  return null;
-}
-
-const CANONICAL_SKILL_URLS: Record<string, string> = {
-  python: 'https://cs50.harvard.edu/python/',
-  javascript: 'https://javascript.info/',
-  typescript: 'https://www.typescriptlang.org/docs/handbook/intro.html',
-  react: 'https://react.dev/learn',
-  sql: 'https://mode.com/sql-tutorial/',
-  nosql: 'https://learn.mongodb.com/',
-  mongodb: 'https://learn.mongodb.com/',
-  'machine-learning': 'https://www.coursera.org/specializations/machine-learning-introduction',
-  'deep-learning': 'https://course.fast.ai/',
-  pandas: 'https://www.kaggle.com/learn/pandas',
-  numpy: 'https://numpy.org/doc/stable/user/quickstart.html',
-  'html-css': 'https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content',
-  css: 'https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/CSS_layout',
-  html: 'https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content',
-  nodejs: 'https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Server-side/Express_Nodejs',
-  node: 'https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Server-side/Express_Nodejs',
-  git: 'https://git-scm.com/book/en/v2',
-  docker: 'https://docs.docker.com/get-started/',
-  nlp: 'https://huggingface.co/learn/nlp-course',
-  statistics: 'https://www.khanacademy.org/math/statistics-probability',
-  probability: 'https://ocw.mit.edu/courses/18-05-introduction-to-probability-and-statistics-spring-2022/',
-  eda: 'https://www.kaggle.com/c/titanic',
-  'feature-engineering': 'https://www.kaggle.com/learn/feature-engineering',
-  'api-design': 'https://github.com/donnemartin/system-design-primer',
-  testing: 'https://docs.pytest.org/en/stable/getting-started.html',
-  excel: 'https://support.microsoft.com/en-us/office/excel-video-training-9bc05390-e94c-46af-977d-0380f30c55e4',
-  java: 'https://dev.java/learn/',
-  cpp: 'https://en.cppreference.com/w/cpp',
-  go: 'https://go.dev/tour/',
-  rust: 'https://doc.rust-lang.org/book/',
-  kubernetes: 'https://kubernetes.io/docs/tutorials/',
-  aws: 'https://aws.amazon.com/training/',
-  flutter: 'https://docs.flutter.dev/get-started/codelab',
-};
-
-function getCanonicalUrl(title: string, skillIds?: string[]): string {
-  const primarySkill = (skillIds?.[0] || '').toLowerCase();
-  for (const [key, url] of Object.entries(CANONICAL_SKILL_URLS)) {
-    if (primarySkill.includes(key) || key.includes(primarySkill) || title.toLowerCase().includes(key)) {
-      return url;
-    }
-  }
-  return 'https://developer.mozilla.org/en-US/docs/Learn_web_development';
+  return {
+    url: `https://www.google.com/search?q=${encodeURIComponent(title + ' documentation tutorial')}`,
+    provider: 'Official Documentation',
+  };
 }
 
 export const RoadmapPage: React.FC = () => {
@@ -138,134 +99,234 @@ export const RoadmapPage: React.FC = () => {
   const [selectedSkillForTrace, setSelectedSkillForTrace] = useState<string | null>(null);
   const [recompilationResult, setRecompilationResult] = useState<RecompilationResult | null>(null);
   const [completingItem, setCompletingItem] = useState<string | null>(null);
+
+  // Assessment Modals State
   const [assessmentTarget, setAssessmentTarget] = useState<{ skillId: string; title: string; item: RoadmapItem } | null>(null);
   const [projectAssessmentTarget, setProjectAssessmentTarget] = useState<{ skillId: string; title: string; item: RoadmapItem } | null>(null);
 
+  // Joyful Celebration Modal State
+  const [celebrationState, setCelebrationState] = useState<{
+    isOpen: boolean;
+    title: string;
+    subtitle?: string;
+    xpEarned?: number;
+    score?: number;
+    nextStepTitle?: string;
+  }>({
+    isOpen: false,
+    title: '',
+  });
+
+  // Persistent Completed Items Set — strictly sanitized against malformed/generic IDs
   const [completedItemIds, setCompletedItemIds] = useState<Set<string>>(() => {
     try {
       const saved = localStorage.getItem('pathwise_completed_item_ids');
-      return saved ? new Set(JSON.parse(saved)) : new Set();
+      if (!saved) return new Set();
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        return new Set(
+          parsed.filter((id: any) =>
+            typeof id === 'string' &&
+            id.trim().length > 3 &&
+            id !== 'undefined' &&
+            id !== 'null' &&
+            id !== 'roadmap-item-skill' &&
+            id !== 'skill' &&
+            id !== '[object Object]'
+          )
+        );
+      }
+      return new Set();
     } catch {
       return new Set();
     }
   });
 
-  const [watchedVideos, setWatchedVideos] = useState<Set<string>>(() => {
+  useEffect(() => {
     try {
-      const saved = localStorage.getItem('pathwise_watched_videos');
-      return saved ? new Set(JSON.parse(saved)) : new Set();
-    } catch {
-      return new Set();
+      const sanitized = Array.from(completedItemIds).filter(
+        id => typeof id === 'string' && id.trim().length > 3 && id !== 'undefined' && id !== 'null'
+      );
+      localStorage.setItem('pathwise_completed_item_ids', JSON.stringify(sanitized));
+    } catch (e) {
+      console.error(e);
     }
-  });
-
-  const toggleWatchVideo = (itemKey: string, title: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const isWatched = watchedVideos.has(itemKey);
-    const next = new Set(watchedVideos);
-    if (isWatched) {
-      next.delete(itemKey);
-      setWatchedVideos(next);
-      localStorage.setItem('pathwise_watched_videos', JSON.stringify(Array.from(next)));
-      toastSuccess(`Marked video for ${title} as unwatched.`);
-    } else {
-      next.add(itemKey);
-      setWatchedVideos(next);
-      localStorage.setItem('pathwise_watched_videos', JSON.stringify(Array.from(next)));
-      toastSuccess(`✓ Watched Video: ${title}!`);
-    }
-  };
+  }, [completedItemIds]);
 
   const fetchRoadmap = async () => {
     try {
       setLoading(true);
       const res = await api.getCurrentPath();
-      setRoadmap(res.roadmap);
-      setTotalWeeks(res.totalEstimatedWeeks);
-      setVersion(res.version);
+      setRoadmap(res.roadmap || []);
+      setTotalWeeks(res.totalEstimatedWeeks || 12);
+      setVersion(res.version || 1);
     } catch {
-      const res = await api.compilePath();
-      setRoadmap(res.roadmap);
-      setTotalWeeks(res.totalEstimatedWeeks);
-      setVersion(res.version);
+      try {
+        const res = await api.compilePath();
+        setRoadmap(res.roadmap || []);
+        setTotalWeeks(res.totalEstimatedWeeks || 12);
+        setVersion(res.version || 1);
+      } catch (err) {
+        console.error('Failed to load roadmap:', err);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchRoadmap(); }, []);
+  useEffect(() => {
+    fetchRoadmap();
+  }, []);
 
+  // Check if an item is completed (strictly matching its own unique ID or status)
+  const isItemCompleted = (item: RoadmapItem, explicitKey?: string) => {
+    if (item.status === 'completed') return true;
+    if (item.id && typeof item.id === 'string' && item.id.length > 3 && item.id !== 'undefined' && completedItemIds.has(item.id)) return true;
+    if (explicitKey && completedItemIds.has(explicitKey)) return true;
+    const fallbackKey = `roadmap-${item.type || 'skill'}-${item.skillIds?.[0] || 'skill'}-${(item.title || 'step').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+    return completedItemIds.has(fallbackKey);
+  };
+
+  // ── Automatic Completion on Passing Milestone Assessment ─────────────────
   const handleAssessmentPassed = async (score: number) => {
     if (!assessmentTarget) return;
-    const targetId = assessmentTarget.item.id;
+
+    const targetId = assessmentTarget.item.id || `assessment-${assessmentTarget.skillId}`;
+    const targetTitle = assessmentTarget.title;
+
+    // 1. Immediately mark as completed in local state & localStorage
     const nextCompleted = new Set(completedItemIds);
     nextCompleted.add(targetId);
     setCompletedItemIds(nextCompleted);
     localStorage.setItem('pathwise_completed_item_ids', JSON.stringify(Array.from(nextCompleted)));
 
+    // Optimistically update roadmap item status
+    setRoadmap(prev =>
+      prev.map(item => ((item.id && item.id === targetId) || (item.title && item.title === targetTitle) ? { ...item, status: 'completed' } : item))
+    );
+
+    // 2. Open Joyful Celebration Modal
+    setCelebrationState({
+      isOpen: true,
+      title: `${targetTitle} Conquered!`,
+      subtitle: `Official assessment passed with a score of ${score}%. The dependency DAG has unlocked your next milestone!`,
+      xpEarned: 100,
+      score,
+      nextStepTitle: 'Next Milestone Unlocked',
+    });
+
+    // 3. Recompile backend DAG to unlock subsequent items
     try {
       const recompileRes = await api.recompilePath(
         [assessmentTarget.skillId],
-        `Passed assessment for ${assessmentTarget.title} with ${score}%`
+        `Passed Milestone Assessment for ${targetTitle} with ${score}%`
       );
-      setRoadmap(recompileRes.roadmap);
-      setTotalWeeks(recompileRes.totalEstimatedWeeks);
-      setVersion(recompileRes.version);
-      setRecompilationResult(recompileRes.recompilation);
+      if (recompileRes?.roadmap) {
+        setRoadmap(recompileRes.roadmap);
+        setTotalWeeks(recompileRes.totalEstimatedWeeks);
+        setVersion(recompileRes.version);
+        setRecompilationResult(recompileRes.recompilation);
+      }
     } catch (err) {
-      console.error('Failed to update roadmap post assessment:', err);
-      fetchRoadmap();
+      console.warn('Backend recompile note:', err);
     }
   };
 
+  // ── Automatic Completion on Passing Project Assessment ───────────────────
   const handleProjectPassed = async (score: number) => {
     if (!projectAssessmentTarget) return;
-    const targetId = projectAssessmentTarget.item.id;
+
+    const targetId = projectAssessmentTarget.item.id || `project-${projectAssessmentTarget.skillId}`;
+    const targetTitle = projectAssessmentTarget.title;
+
     const nextCompleted = new Set(completedItemIds);
     nextCompleted.add(targetId);
     setCompletedItemIds(nextCompleted);
     localStorage.setItem('pathwise_completed_item_ids', JSON.stringify(Array.from(nextCompleted)));
+
+    setRoadmap(prev =>
+      prev.map(item => ((item.id && item.id === targetId) || (item.title && item.title === targetTitle) ? { ...item, status: 'completed' } : item))
+    );
+
+    setCelebrationState({
+      isOpen: true,
+      title: `Capstone Project Verified!`,
+      subtitle: `Hands-on project for ${targetTitle} verified with ${score}% grade. Outstanding engineering work!`,
+      xpEarned: 200,
+      score,
+      nextStepTitle: 'Production Ready Competency',
+    });
 
     try {
       const recompileRes = await api.recompilePath(
         [projectAssessmentTarget.skillId],
-        `Passed Project: ${projectAssessmentTarget.title} with ${score}%`
+        `Completed Capstone Project for ${targetTitle}`
       );
-      setRoadmap(recompileRes.roadmap);
-      setTotalWeeks(recompileRes.totalEstimatedWeeks);
-      setVersion(recompileRes.version);
-      setRecompilationResult(recompileRes.recompilation);
+      if (recompileRes?.roadmap) {
+        setRoadmap(recompileRes.roadmap);
+        setTotalWeeks(recompileRes.totalEstimatedWeeks);
+        setVersion(recompileRes.version);
+        setRecompilationResult(recompileRes.recompilation);
+      }
     } catch (err) {
-      console.error('Failed to update roadmap post project assessment:', err);
-      fetchRoadmap();
+      console.warn('Backend recompile note:', err);
     }
   };
 
-  const toggleCompleteItem = async (item: RoadmapItem) => {
-    const itemKey = item.id;
+  // ── Toggle Completion for Regular Learning Steps ─────────────────────────
+  const toggleCompleteItem = async (item: RoadmapItem, explicitKey?: string) => {
+    const itemTitleSlug = (item.title || 'step').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const itemKey = (explicitKey && explicitKey.length > 3)
+      ? explicitKey
+      : (item.id && typeof item.id === 'string' && item.id.length > 3 && item.id !== 'undefined')
+      ? item.id
+      : `roadmap-step-${item.skillIds?.[0] || 'skill'}-${itemTitleSlug}`;
+
+    if (!itemKey || itemKey === 'undefined' || itemKey === 'null') return;
+
     setCompletingItem(itemKey);
-    const wasCompleted = completedItemIds.has(itemKey);
+    const wasCompleted = isItemCompleted(item, itemKey);
     const nextCompleted = new Set(completedItemIds);
 
     if (wasCompleted) {
       nextCompleted.delete(itemKey);
+      if (item.id && item.id.length > 3) nextCompleted.delete(item.id);
       setCompletedItemIds(nextCompleted);
       localStorage.setItem('pathwise_completed_item_ids', JSON.stringify(Array.from(nextCompleted)));
-      toastSuccess(`Marked ${item.title} as incomplete.`);
+      setRoadmap(prev =>
+        prev.map(i => {
+          const match = (item.id && i.id && i.id === item.id) || (i.title && i.title === item.title);
+          return match ? { ...i, status: 'available' } : i;
+        })
+      );
+      toastSuccess(`Marked "${item.title}" as incomplete.`);
       setCompletingItem(null);
     } else {
       nextCompleted.add(itemKey);
+      if (item.id && item.id.length > 3) nextCompleted.add(item.id);
       setCompletedItemIds(nextCompleted);
       localStorage.setItem('pathwise_completed_item_ids', JSON.stringify(Array.from(nextCompleted)));
+
+      setRoadmap(prev =>
+        prev.map(i => {
+          const match = (item.id && i.id && i.id === item.id) || (i.title && i.title === item.title);
+          return match ? { ...i, status: 'completed' } : i;
+        })
+      );
+
+      // Trigger Confetti & Chime on completing this module
+      playVictoryChime();
+      triggerConfetti(2500);
+
       try {
         await api.recordProgressEvent({
           type: 'RESOURCE_COMPLETED',
-          skillIds: item.skillIds || ['sql'],
+          skillIds: item.skillIds?.length ? item.skillIds : ['sql'],
           resourceId: itemKey,
-          score: 90,
+          score: 100,
           metadata: { title: item.title },
         });
-        toastSuccess(`✓ Completed step: ${item.title}!`);
+        toastSuccess(`🎉 ✓ Completed: ${item.title}! +50 XP Earned.`);
       } catch (err) {
         console.error('Failed to log completion event:', err);
       } finally {
@@ -274,31 +335,44 @@ export const RoadmapPage: React.FC = () => {
     }
   };
 
-  // Group by milestone
-  const milestones = roadmap.reduce((acc, item) => {
-    const m = item.milestone || 1;
-    if (!acc[m]) acc[m] = [];
-    acc[m].push(item);
-    return acc;
-  }, {} as Record<number, RoadmapItem[]>);
+  // ── Group by milestone ───────────────────────────────────────────────────
+  const milestones = useMemo(() => {
+    const map: Record<number, RoadmapItem[]> = {};
+    roadmap.forEach(item => {
+      const m = item.milestone || 1;
+      if (!map[m]) map[m] = [];
+      map[m].push(item);
+    });
+    return map;
+  }, [roadmap]);
 
-  const completedCount = roadmap.filter(i => i.status === 'completed').length;
-  const progressRatio = roadmap.length ? completedCount / roadmap.length : 0;
+  // ── Dynamic Accurate Roadmap Completion Tracker ──────────────────────────
+  const totalSteps = roadmap.length;
+  const completedCount = useMemo(() => {
+    return roadmap.filter(i => isItemCompleted(i)).length;
+  }, [roadmap, completedItemIds]);
+
+  const progressPercent = totalSteps > 0 ? Math.round((completedCount / totalSteps) * 100) : 0;
 
   return (
-    <div className="page-shell space-y-6 page-enter">
+    <div className="page-shell space-y-6 page-enter pb-20">
 
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-5 border-b border-[var(--border-dim)] animate-fade-up">
         <div className="space-y-1">
           <p className="section-eyebrow">Prerequisite-Aware Sequence</p>
-          <h1 className="section-title">Personalized Roadmap</h1>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="section-title">Personalized Roadmap</h1>
+            <span className="badge badge-amber text-[10px] font-mono font-bold">
+              v{version}.0 ACTIVE DAG
+            </span>
+          </div>
           <p className="text-[13px] text-[var(--text-secondary)]">
-            {totalWeeks} weeks estimated · {completedCount}/{roadmap.length} steps completed · version v{version}.0
+            {totalWeeks} weeks estimated · <strong className="text-emerald-400">{completedCount} of {totalSteps} steps completed</strong> ({progressPercent}%)
           </p>
         </div>
 
-        <div className="flex items-center gap-4 text-[11px] font-mono text-[var(--text-muted)]">
+        <div className="flex items-center gap-3 text-[11px] font-mono text-[var(--text-muted)] flex-wrap">
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[var(--primary-500)] animate-pulse" /> Available
           </span>
@@ -316,55 +390,67 @@ export const RoadmapPage: React.FC = () => {
         <RecompilationBanner result={recompilationResult} onDismiss={() => setRecompilationResult(null)} />
       )}
 
-      {/* ── Progress overview ───────────────────────────────── */}
-      <div className="card p-5 animate-fade-up delay-100">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider font-mono">
-            Overall Roadmap Completion
-          </span>
-          <span className="font-mono text-[13px] text-[var(--primary-300)] font-bold">
-            {completedCount} / {roadmap.length} steps
-          </span>
+      {/* ── Working Dynamic Progress Overview Tracker ───────────── */}
+      <div className="p-6 rounded-3xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-3.5 animate-fade-up shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <span className="badge badge-emerald text-[9px] font-mono font-bold">
+                <Sparkles size={10} /> ROADMAP COMPLETION TRACKER
+              </span>
+              <span className="text-xs font-mono text-[var(--text-muted)] font-bold">
+                {completedCount} / {totalSteps} Steps Completed
+              </span>
+            </div>
+            <h2 className="text-sm font-bold text-white font-display">
+              Overall Roadmap Progress
+            </h2>
+          </div>
+
+          <div className="text-right">
+            <span className="text-xl font-black font-mono text-amber-300">
+              {progressPercent}%
+            </span>
+          </div>
         </div>
-        <div
-          className="progress-track"
-          role="progressbar"
-          aria-valuenow={completedCount}
-          aria-valuemax={roadmap.length}
-          aria-label="Roadmap completion"
-        >
+
+        {/* Working Dynamic Glowing Progress Bar */}
+        <div className="w-full h-3 rounded-full bg-[var(--bg-void)] border border-[var(--border-subtle)] overflow-hidden shadow-inner">
           <div
-            className="progress-fill progress-fill-amber"
-            style={{ transform: `scaleX(${progressRatio})` }}
+            className="h-full bg-gradient-to-r from-amber-500 via-emerald-400 to-cyan-400 rounded-full transition-all duration-700 ease-out shadow-[0_0_12px_rgba(245,158,11,0.5)]"
+            style={{ width: `${progressPercent}%` }}
           />
         </div>
       </div>
 
       {/* ── Milestone Timeline ──────────────────────────────── */}
       {loading ? (
-        <div className="py-16 text-center space-y-3 animate-fade-in">
+        <div className="py-16 text-center card space-y-3 animate-fade-in">
           <Loader2 size={28} className="text-[var(--primary-500)] animate-spin mx-auto" />
-          <p className="text-[13px] text-[var(--text-secondary)]">
-            Compiling dependency graph and optimizing path…
+          <p className="text-[13px] text-[var(--text-secondary)] font-mono">
+            Compiling prerequisite dependency graph and verifying milestones…
           </p>
         </div>
       ) : (
         <div className="space-y-10">
           {Object.entries(milestones).map(([mNum, items], mIdx) => {
-            const mCompleted = items.every(i => i.status === 'completed');
-            const mActive    = items.some(i => i.status === 'available');
+            const mCompletedCount = items.filter(i => isItemCompleted(i)).length;
+            const mTotalCount = items.length;
+            const mCompleted = mCompletedCount === mTotalCount && mTotalCount > 0;
+            const mActive = items.some(i => i.status === 'available');
+
             return (
               <section
                 key={mNum}
-                className="animate-fade-up"
+                className="animate-fade-up space-y-4"
                 style={{ animationDelay: `${mIdx * 60}ms` }}
               >
                 {/* Milestone heading */}
-                <div className="flex items-center gap-3 mb-4">
+                <div className="flex items-center gap-3">
                   <div
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold font-mono transition-all"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-xs font-bold font-mono transition-all shadow-md"
                     style={{
-                      background: mCompleted ? 'rgba(16,185,129,0.15)' : mActive ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.04)',
+                      background: mCompleted ? 'rgba(16,185,129,0.18)' : mActive ? 'rgba(245,158,11,0.18)' : 'rgba(255,255,255,0.04)',
                       border: `1.5px solid ${mCompleted ? 'rgba(16,185,129,0.5)' : mActive ? 'rgba(245,158,11,0.5)' : 'var(--border-dim)'}`,
                       color: mCompleted ? 'var(--accent-400)' : mActive ? 'var(--primary-300)' : 'var(--text-muted)',
                     }}
@@ -373,65 +459,81 @@ export const RoadmapPage: React.FC = () => {
                     M{mNum}
                   </div>
                   <div className="flex-1 flex items-center gap-3 min-w-0">
-                    <h2 className="text-[15px] font-bold text-[var(--text-primary)] font-display whitespace-nowrap">
+                    <h2 className="text-base font-bold text-[var(--text-primary)] font-display whitespace-nowrap">
                       Milestone {mNum}
                     </h2>
                     <div className="flex-1 h-px bg-[var(--border-dim)]" />
-                    <span className="text-[10px] font-mono text-[var(--text-muted)] whitespace-nowrap">
-                      {items.filter(i => i.status === 'completed').length}/{items.length} done
+                    <span className="text-xs font-mono text-[var(--text-muted)] whitespace-nowrap">
+                      <strong className={mCompleted ? 'text-emerald-400' : 'text-white'}>
+                        {mCompletedCount} / {mTotalCount} Done
+                      </strong>
                     </span>
+                    {mCompleted && (
+                      <span className="badge badge-emerald text-[9px] font-mono font-bold">
+                        ✓ COMPLETED
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 {/* Items */}
-                <div className="space-y-3 ml-11">
+                <div className="space-y-3 ml-2 sm:ml-12">
                   {items.map((item, idx) => {
+                    const itemTitleSlug = (item.title || 'step').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                    const itemKey = (item.id && item.id.trim().length > 3 && item.id !== 'undefined' && item.id !== 'null')
+                      ? item.id
+                      : `roadmap-${item.type || 'skill'}-${item.skillIds?.[0] || 'skill'}-m${mNum}-${itemTitleSlug}-${idx}`;
+                    const isCompleted = isItemCompleted(item, itemKey);
                     const isAvailable = item.status === 'available';
-                    const isCompleted = item.type === 'ASSESSMENT' || item.type === 'PROJECT'
-                      ? item.status === 'completed'
-                      : completedItemIds.has(item.id);
-                    const isWatched = watchedVideos.has(item.id);
+                    const isAssessmentType = item.type === 'ASSESSMENT';
+                    const isProjectType = item.type === 'PROJECT';
+
                     const typeStyle = TYPE_STYLES[item.type] || TYPE_STYLES.RESOURCE;
                     const canonicalUrl = getCanonicalUrl(item.title, item.skillIds);
-                    const canonicalVideo = getCanonicalVideo(item.title, item.skillIds);
+
+                    const resolvedSkillId = (item.skillIds?.[0]?.startsWith('assessment-') || item.skillIds?.[0]?.startsWith('project-'))
+                      ? (item.prerequisiteIds?.[0] || 'sql')
+                      : (item.skillIds?.[0] || 'sql');
 
                     return (
                       <article
-                        key={item.id}
+                        key={item.id || itemKey}
                         className={`rounded-2xl border p-5 transition-all animate-fade-up ${
                           isCompleted
-                            ? 'bg-[var(--bg-surface)] border-[var(--border-dim)] opacity-75'
+                            ? 'bg-[rgba(16,185,129,0.03)] border-[rgba(16,185,129,0.3)] shadow-sm'
                             : isAvailable
-                            ? 'bg-[var(--bg-surface)] border-[rgba(245,158,11,0.3)] shadow-[0_0_0_1px_rgba(245,158,11,0.08),0_12px_28px_-8px_rgba(0,0,0,0.5)]'
+                            ? 'bg-[var(--bg-surface)] border-[rgba(245,158,11,0.35)] shadow-[0_0_0_1px_rgba(245,158,11,0.1),0_12px_28px_-8px_rgba(0,0,0,0.5)]'
                             : 'bg-[var(--bg-base)] border-[var(--border-dim)]'
                         }`}
                         style={{ animationDelay: `${mIdx * 60 + idx * 30}ms` }}
                       >
                         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                          
+                          {/* Left: Info & Badges */}
                           <div className="space-y-2 flex-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
                               {/* Type badge */}
                               <span
-                                className="badge text-[9px]"
+                                className="badge text-[9.5px] font-mono font-bold"
                                 style={{ background: typeStyle.bg, borderColor: typeStyle.border, color: typeStyle.text }}
                               >
                                 {typeStyle.icon} {typeStyle.label}
                               </span>
 
                               {isCompleted && (
-                                <span className="badge badge-emerald text-[9px]">
-                                  <CheckCircle2 size={9} /> Completed
+                                <span className="badge badge-emerald text-[9px] font-mono font-bold">
+                                  <CheckCircle2 size={10} /> Verified Complete
                                 </span>
                               )}
 
                               {isAvailable && !isCompleted && (
-                                <span className="badge badge-amber text-[9px] animate-pulse">
-                                  Available Now
+                                <span className="badge badge-amber text-[9px] font-mono font-bold animate-pulse">
+                                  Ready to Start
                                 </span>
                               )}
                             </div>
 
-                            <h3 className={`text-[15px] font-bold font-display leading-tight ${isCompleted ? 'text-[var(--text-muted)]' : 'text-[var(--text-primary)]'}`}>
+                            <h3 className={`text-base font-bold font-display leading-tight ${isCompleted ? 'text-emerald-200' : 'text-white'}`}>
                               {item.title}
                             </h3>
                             <p className="text-[12px] text-[var(--text-secondary)] leading-relaxed">{item.reason}</p>
@@ -456,149 +558,133 @@ export const RoadmapPage: React.FC = () => {
                             </div>
                           </div>
 
-                          {/* Actions: Video + Watch Toggle + Quiz Assessment + Trace */}
-                          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
-                            {/* Canonical Video Lesson */}
-                            {canonicalVideo && (
-                              <div className="flex items-center gap-1">
-                                <a
-                                  href={canonicalVideo.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="btn btn-ghost btn-xs font-mono text-[10px] text-[#f87171] hover:bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.25)] flex items-center gap-1"
-                                  title={`Watch ${canonicalVideo.title} by ${canonicalVideo.creator}`}
-                                >
-                                  <Video size={11} />
-                                  <span>Video ↗</span>
-                                </a>
-
-                                <button
-                                  onClick={(e) => toggleWatchVideo(item.id, item.title, e)}
-                                  className={`btn btn-xs font-mono text-[10px] px-2 flex items-center gap-1 ${
-                                    isWatched
-                                      ? 'bg-[rgba(16,185,129,0.18)] text-[var(--accent-300)] border border-[rgba(16,185,129,0.4)]'
-                                      : 'btn-ghost text-[var(--text-muted)] border border-[var(--border-dim)]'
-                                  }`}
-                                  title={isWatched ? 'Video completed (click to unmark)' : 'Mark video as watched'}
-                                >
-                                  <CheckCircle2 size={10} className={isWatched ? 'text-[var(--accent-400)]' : 'text-[var(--text-muted)]'} />
-                                  <span>{isWatched ? 'Watched' : 'Mark Watched'}</span>
-                                </button>
-                              </div>
-                            )}
-
+                          {/* Right Actions */}
+                          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0 self-start sm:self-center">
+                            
+                            {/* Trace button if available */}
                             {item.skillIds?.[0] && (
                               <button
                                 onClick={() => setSelectedSkillForTrace(item.skillIds[0])}
-                                className="btn btn-ghost btn-xs font-mono"
+                                className="btn btn-ghost btn-xs font-mono text-[10px]"
                                 aria-label="View recommendation trace"
-                                id={`roadmap-trace-${item.id}`}
+                                title="View DAG prerequisite trace"
                               >
                                 <Eye size={11} /> Trace
                               </button>
                             )}
 
-                            {/* Action Buttons based on item type */}
-                            {(() => {
-                              const resolvedSkillId = (item.skillIds?.[0]?.startsWith('assessment-') || item.skillIds?.[0]?.startsWith('project-'))
-                                ? (item.prerequisiteIds?.[0] || 'sql')
-                                : (item.skillIds?.[0] || 'sql');
-
-                              if (item.type === 'PROJECT') {
-                                return isCompleted ? (
-                                  <div className="flex items-center gap-2">
-                                    <span className="badge badge-emerald text-[10px] font-mono font-bold flex items-center gap-1">
-                                      <CheckCircle2 size={11} /> Completed
-                                    </span>
-                                    <button
-                                      onClick={() => setProjectAssessmentTarget({ skillId: resolvedSkillId, title: item.title, item })}
-                                      className="btn btn-secondary btn-xs font-mono text-[10px] flex items-center gap-1 cursor-pointer"
-                                      title="Review submitted code or retake project"
-                                    >
-                                      <RotateCcw size={10} />
-                                      <span>Retake Project</span>
-                                    </button>
-                                  </div>
-                                ) : (
+                            {/* ── CASE 1: MILESTONE ASSESSMENT (Pure Assessment — No Courses/Videos) ── */}
+                            {isAssessmentType && (
+                              isCompleted ? (
+                                <div className="flex items-center gap-2">
+                                  <span className="badge badge-emerald text-[10px] font-mono font-bold flex items-center gap-1">
+                                    <CheckCircle2 size={11} /> Passed
+                                  </span>
                                   <button
-                                    id={`roadmap-project-${item.id}`}
-                                    onClick={() => setProjectAssessmentTarget({ skillId: resolvedSkillId, title: item.title, item })}
-                                    className="btn btn-primary btn-sm font-mono text-[11px] flex items-center gap-1.5 shadow-sm"
-                                    aria-label={`Start Project Assessment for ${item.title}`}
-                                  >
-                                    <FolderGit2 size={12} />
-                                    <span>Start Project Assessment</span>
-                                    <ChevronRight size={11} />
-                                  </button>
-                                );
-                              }
-
-                              if (item.type === 'ASSESSMENT') {
-                                return isCompleted ? (
-                                  <div className="flex items-center gap-2">
-                                    <span className="badge badge-emerald text-[10px] font-mono font-bold flex items-center gap-1">
-                                      <CheckCircle2 size={11} /> Completed
-                                    </span>
-                                    <button
-                                      onClick={() => setAssessmentTarget({ skillId: resolvedSkillId, title: item.title, item })}
-                                      className="btn btn-secondary btn-xs font-mono text-[10px] flex items-center gap-1 cursor-pointer"
-                                      title="Retake milestone quiz"
-                                    >
-                                      <RotateCcw size={10} />
-                                      <span>Retake Test</span>
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <button
-                                    id={`roadmap-quiz-${item.id}`}
                                     onClick={() => setAssessmentTarget({ skillId: resolvedSkillId, title: item.title, item })}
-                                    className="btn btn-primary btn-sm font-mono text-[11px] flex items-center gap-1.5 shadow-sm"
-                                    aria-label={`Take assessment for ${item.title}`}
+                                    className="btn btn-secondary btn-xs font-mono text-[10px] flex items-center gap-1 cursor-pointer"
+                                    title="Retake milestone quiz"
                                   >
-                                    <HelpCircle size={12} />
-                                    <span>Take Milestone Assessment</span>
-                                    <ChevronRight size={11} />
+                                    <RotateCcw size={10} />
+                                    <span>Retake Test</span>
                                   </button>
-                                );
-                              }
-
-                              /* Regular Course / Resource / Practice — Toggle Complete button */
-                              return isCompleted ? (
-                                <button
-                                  id={`roadmap-complete-${item.id}`}
-                                  onClick={() => toggleCompleteItem(item)}
-                                  disabled={completingItem === item.id}
-                                  className="btn btn-xs font-mono text-[11px] px-3 py-1.5 flex items-center gap-1.5 bg-[rgba(16,185,129,0.18)] text-[var(--accent-300)] border border-[rgba(16,185,129,0.4)] hover:bg-[rgba(239,68,68,0.15)] hover:text-red-300 hover:border-red-500/40 transition-all cursor-pointer group"
-                                  title="Completed (Click to unmark)"
-                                >
-                                  {completingItem === item.id ? (
-                                    <Loader2 size={11} className="animate-spin" />
-                                  ) : (
-                                    <>
-                                      <CheckCircle2 size={11} className="text-[var(--accent-400)] group-hover:hidden" />
-                                      <span className="group-hover:hidden">Completed</span>
-                                      <RotateCcw size={11} className="hidden group-hover:inline text-red-400" />
-                                      <span className="hidden group-hover:inline text-red-300">Unmark</span>
-                                    </>
-                                  )}
-                                </button>
+                                </div>
                               ) : (
                                 <button
-                                  id={`roadmap-complete-${item.id}`}
-                                  onClick={() => toggleCompleteItem(item)}
-                                  disabled={completingItem === item.id}
-                                  className="btn btn-secondary btn-sm font-mono text-[11px] flex items-center gap-1.5 border-[var(--border-subtle)] hover:border-[var(--accent-400)] hover:text-[var(--accent-300)] cursor-pointer"
-                                  title="Mark step as complete"
+                                  id={`roadmap-quiz-${item.id}`}
+                                  onClick={() => setAssessmentTarget({ skillId: resolvedSkillId, title: item.title, item })}
+                                  className="btn btn-primary btn-sm font-mono text-[11px] flex items-center gap-1.5 shadow-md cursor-pointer"
+                                  aria-label={`Take assessment for ${item.title}`}
                                 >
-                                  {completingItem === item.id ? (
-                                    <Loader2 size={11} className="animate-spin" />
-                                  ) : (
-                                    <CheckCircle2 size={11} />
-                                  )}
-                                  <span>Mark Complete</span>
+                                  <HelpCircle size={13} />
+                                  <span>Take Milestone Assessment</span>
+                                  <ChevronRight size={11} />
                                 </button>
-                              );
-                            })()}
+                              )
+                            )}
+
+                            {/* ── CASE 2: CAPSTONE PROJECT (Pure Project Assessment — No Videos) ── */}
+                            {isProjectType && (
+                              isCompleted ? (
+                                <div className="flex items-center gap-2">
+                                  <span className="badge badge-emerald text-[10px] font-mono font-bold flex items-center gap-1">
+                                    <CheckCircle2 size={11} /> Passed
+                                  </span>
+                                  <button
+                                    onClick={() => setProjectAssessmentTarget({ skillId: resolvedSkillId, title: item.title, item })}
+                                    className="btn btn-secondary btn-xs font-mono text-[10px] flex items-center gap-1 cursor-pointer"
+                                    title="Review submitted code or retake project"
+                                  >
+                                    <RotateCcw size={10} />
+                                    <span>Retake Project</span>
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  id={`roadmap-project-${item.id}`}
+                                  onClick={() => setProjectAssessmentTarget({ skillId: resolvedSkillId, title: item.title, item })}
+                                  className="btn btn-primary btn-sm font-mono text-[11px] flex items-center gap-1.5 shadow-md cursor-pointer"
+                                  aria-label={`Start Project Assessment for ${item.title}`}
+                                >
+                                  <FolderGit2 size={13} />
+                                  <span>Start Project Assessment</span>
+                                  <ChevronRight size={11} />
+                                </button>
+                              )
+                            )}
+
+                            {/* ── CASE 3: REGULAR LEARNING MODULE ── */}
+                            {!isAssessmentType && !isProjectType && (
+                              <>
+                                <a
+                                  href={canonicalUrl.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="btn btn-ghost btn-xs font-mono text-[10px] text-[var(--cyan-300)] hover:bg-[rgba(14,165,233,0.12)] border border-[rgba(14,165,233,0.3)] flex items-center gap-1"
+                                  title={`Open ${item.title} documentation`}
+                                >
+                                  <BookOpen size={11} />
+                                  <span>Docs ↗</span>
+                                </a>
+
+                                {isCompleted ? (
+                                  <button
+                                    id={`roadmap-complete-${itemKey}`}
+                                    onClick={() => toggleCompleteItem(item, itemKey)}
+                                    disabled={completingItem === itemKey}
+                                    className="btn btn-xs font-mono text-[11px] px-3 py-1.5 flex items-center gap-1.5 bg-[rgba(16,185,129,0.18)] text-[var(--accent-300)] border border-[rgba(16,185,129,0.4)] hover:bg-[rgba(239,68,68,0.15)] hover:text-red-300 hover:border-red-500/40 transition-all cursor-pointer group"
+                                    title="Completed (Click to unmark)"
+                                  >
+                                    {completingItem === itemKey ? (
+                                      <Loader2 size={11} className="animate-spin" />
+                                    ) : (
+                                      <>
+                                        <CheckCircle2 size={11} className="text-[var(--accent-400)] group-hover:hidden" />
+                                        <span className="group-hover:hidden">Completed</span>
+                                        <RotateCcw size={11} className="hidden group-hover:inline text-red-400" />
+                                        <span className="hidden group-hover:inline text-red-300">Unmark</span>
+                                      </>
+                                    )}
+                                  </button>
+                                ) : (
+                                  <button
+                                    id={`roadmap-complete-${itemKey}`}
+                                    onClick={() => toggleCompleteItem(item, itemKey)}
+                                    disabled={completingItem === itemKey}
+                                    className="btn btn-secondary btn-sm font-mono text-[11px] flex items-center gap-1.5 border-[var(--border-subtle)] hover:border-[var(--accent-400)] hover:text-[var(--accent-300)] cursor-pointer active:scale-95"
+                                    title="Mark step as complete"
+                                  >
+                                    {completingItem === itemKey ? (
+                                      <Loader2 size={11} className="animate-spin" />
+                                    ) : (
+                                      <CheckCircle2 size={11} />
+                                    )}
+                                    <span>Mark Complete</span>
+                                  </button>
+                                )}
+                              </>
+                            )}
+
                           </div>
                         </div>
                       </article>
@@ -630,6 +716,19 @@ export const RoadmapPage: React.FC = () => {
           isOpen={Boolean(projectAssessmentTarget)}
           onClose={() => setProjectAssessmentTarget(null)}
           onProjectPassed={handleProjectPassed}
+        />
+      )}
+
+      {/* ── Joyful Celebration Modal ────────────────────────────── */}
+      {celebrationState.isOpen && (
+        <CelebrationModal
+          isOpen={celebrationState.isOpen}
+          onClose={() => setCelebrationState(prev => ({ ...prev, isOpen: false }))}
+          title={celebrationState.title}
+          subtitle={celebrationState.subtitle}
+          xpEarned={celebrationState.xpEarned}
+          score={celebrationState.score}
+          nextStepTitle={celebrationState.nextStepTitle}
         />
       )}
 

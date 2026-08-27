@@ -65,8 +65,9 @@ function pathItemToRoadmapItem(
     ? findResources(item.skillId, resources, learningPreferences)
     : [];
 
+  const titleSlug = (item.skillName || 'item').toLowerCase().replace(/[^a-z0-9]+/g, '-');
   return {
-    id: `${item.type.toLowerCase()}-${item.skillId}-${item.milestone}-${index}`,
+    id: `${item.type.toLowerCase()}-${item.skillId}-${item.milestone}-${titleSlug}-${index}`,
     type: item.type === 'SKILL' ? 'COURSE' : item.type,
     title: item.skillName,
     skillIds: [item.skillId],

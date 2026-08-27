@@ -144,11 +144,17 @@ router.post('/compile', authMiddleware, async (req: AuthRequest, res: Response) 
     // Save roadmap
     const newVersion = (learner.currentRoadmapVersion || 0) + 1;
 
+    const sanitizedItems = roadmap.items.map((item, idx) => ({
+      ...item,
+      id: item.id || `roadmap-${item.type.toLowerCase()}-${item.skillIds?.[0] || 'skill'}-${item.milestone || 1}-${idx}`,
+      itemId: item.id || `roadmap-${item.type.toLowerCase()}-${item.skillIds?.[0] || 'skill'}-${item.milestone || 1}-${idx}`,
+    }));
+
     await RoadmapModel.findOneAndUpdate(
       { learnerId: req.userId },
       {
         learnerId: req.userId,
-        items: roadmap.items,
+        items: sanitizedItems,
         totalEstimatedWeeks: roadmap.totalEstimatedWeeks,
         version: newVersion,
         compiledAt: new Date(),
@@ -161,7 +167,7 @@ router.post('/compile', authMiddleware, async (req: AuthRequest, res: Response) 
     });
 
     res.json({
-      roadmap: roadmap.items,
+      roadmap: sanitizedItems,
       totalEstimatedWeeks: roadmap.totalEstimatedWeeks,
       version: newVersion,
       skillGaps: gaps,
@@ -181,8 +187,13 @@ router.get('/current', authMiddleware, async (req: AuthRequest, res: Response) =
       return;
     }
 
+    const sanitizedItems = (roadmap.items || []).map((item: any, idx: number) => ({
+      ...item,
+      id: item.id || item.itemId || `roadmap-${item.type?.toLowerCase() || 'skill'}-${item.skillIds?.[0] || 'skill'}-${item.milestone || 1}-${idx}`,
+    }));
+
     res.json({
-      roadmap: roadmap.items,
+      roadmap: sanitizedItems,
       totalEstimatedWeeks: roadmap.totalEstimatedWeeks,
       version: roadmap.version,
       compiledAt: roadmap.compiledAt,
@@ -279,10 +290,16 @@ router.post('/recompile', authMiddleware, async (req: AuthRequest, res: Response
     // Save updated roadmap
     const newVersion = (learner.currentRoadmapVersion || 0) + 1;
 
+    const sanitizedNewItems = newRoadmapItems.map((item, idx) => ({
+      ...item,
+      id: item.id || `roadmap-${item.type.toLowerCase()}-${item.skillIds?.[0] || 'skill'}-${item.milestone || 1}-${idx}`,
+      itemId: item.id || `roadmap-${item.type.toLowerCase()}-${item.skillIds?.[0] || 'skill'}-${item.milestone || 1}-${idx}`,
+    }));
+
     await RoadmapModel.findOneAndUpdate(
       { learnerId: req.userId },
       {
-        items: newRoadmapItems,
+        items: sanitizedNewItems,
         totalEstimatedWeeks,
         version: newVersion,
         compiledAt: new Date(),
@@ -294,7 +311,7 @@ router.post('/recompile', authMiddleware, async (req: AuthRequest, res: Response
     });
 
     res.json({
-      roadmap: newRoadmapItems,
+      roadmap: sanitizedNewItems,
       totalEstimatedWeeks,
       version: newVersion,
       recompilation: result,

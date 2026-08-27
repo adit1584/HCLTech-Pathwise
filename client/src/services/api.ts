@@ -52,6 +52,18 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
 export const api = {
   // Auth
+  sendOtp: (data: { name: string; email: string; password: string }) =>
+    request<{ success: boolean; message: string; email: string; devOtp?: string }>('/auth/send-otp', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  verifyOtp: (data: { email: string; otp: string }) =>
+    request<{ token: string; user: any }>('/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   register: (data: { name: string; email: string; password: string }) =>
     request<{ token: string; user: any }>('/auth/register', {
       method: 'POST',
@@ -103,7 +115,8 @@ export const api = {
 
   // Skills
   getSkills: () => request<{ skills: any[] }>('/skills'),
-  getSkillGraph: () => request<SkillGraphData>('/skills/graph'),
+  getSkillGraph: (role?: string) =>
+    request<SkillGraphData>(role ? `/skills/graph?role=${encodeURIComponent(role)}` : '/skills/graph'),
   getSkillDetail: (skillId: string) => request<any>(`/skills/${skillId}`),
 
   // Diagnostic
@@ -217,10 +230,15 @@ export const api = {
     }),
 
   // What-If Simulator
-  simulateWhatIf: (data: { weeklyHours?: number; targetRole?: string; skipSkills?: string[] }) =>
+  simulateWhatIf: (data: { weeklyHours?: number; targetRole?: string; secondaryRole?: string | null; skipSkills?: string[] }) =>
     request<{
       simulatedRole: string;
-      simulatedRoleId?: string;
+      simulatedRoleId: string;
+      isDualRole?: boolean;
+      primaryRoleName?: string;
+      secondaryRoleName?: string;
+      sharedSkills?: string[];
+      synergyWeeksSaved?: number;
       simulatedWeeklyHours: number;
       simulatedTotalWeeks: number;
       baseWeeks: number;
@@ -233,7 +251,7 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
-  applySimulation: (data: { weeklyHours?: number; targetRole?: string; skipSkills?: string[] }) =>
+  applySimulation: (data: { weeklyHours?: number; targetRole?: string; secondaryRole?: string | null; skipSkills?: string[] }) =>
     request<{
       success: boolean;
       recompiled: boolean;
@@ -243,6 +261,54 @@ export const api = {
       totalEstimatedWeeks: number;
       message: string;
     }>('/simulator/apply-simulation', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // Practice Challenges & Dynamic Questions
+  getRoadmapPracticeQuestions: () =>
+    request<{
+      targetRole: string;
+      targetRoleName: string;
+      roadmapSkills: Array<{ skillId: string; skillName: string; milestone: number }>;
+      questions: Array<{
+        id: string;
+        title: string;
+        skillId: string;
+        skillName: string;
+        milestone: number;
+        category: string;
+        platform: string;
+        difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+        estimatedMinutes: number;
+        url: string;
+        problemStatement: string;
+        tags: string[];
+        skills: string[];
+        quiz?: {
+          question: string;
+          options: string[];
+          correctAnswer: number;
+          explanation: string;
+          codeSnippet?: string;
+        };
+      }>;
+    }>('/practice/roadmap-questions'),
+
+  generatePracticeQuestions: (data: { skillId: string; skillName?: string; role?: string; count?: number }) =>
+    request<{ questions: any[]; skillName: string }>('/practice/generate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  submitPracticeAnswer: (data: { questionId: string; skillId: string; selectedOption?: number; correctAnswer?: number; title?: string }) =>
+    request<{
+      success: boolean;
+      isCorrect: boolean;
+      score: number;
+      xpEarned: number;
+      message: string;
+    }>('/practice/submit', {
       method: 'POST',
       body: JSON.stringify(data),
     }),

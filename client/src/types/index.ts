@@ -75,6 +75,10 @@ export interface SkillNode {
   estimatedHours: number;
   prerequisites: string[];
   relatedSkills: string[];
+  isRequired?: boolean;
+  targetProficiency?: number;
+  importance?: number;
+  milestone?: number;
 }
 
 export interface SkillEdge {
@@ -86,6 +90,9 @@ export interface SkillEdge {
 export interface SkillGraphData {
   nodes: SkillNode[];
   edges: SkillEdge[];
+  role?: string;
+  roleId?: string;
+  totalRequiredSkills?: number;
 }
 
 export interface RoadmapItem {

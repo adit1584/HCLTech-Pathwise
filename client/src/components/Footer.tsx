@@ -60,8 +60,8 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/what-if" className="text-slate-400 hover:text-amber-400 transition-colors">
-                  What-If Scenario Simulator
+                <Link to="/simulator" className="text-slate-400 hover:text-amber-400 transition-colors">
+                  Career Path Simulator
                 </Link>
               </li>
             </ul>
@@ -84,13 +84,13 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/diagnostic" className="text-slate-400 hover:text-amber-400 transition-colors">
-                  Adaptive Skill Diagnostic
+                <Link to="/profile" className="text-slate-400 hover:text-amber-400 transition-colors">
+                  Learner Profile & Mastery
                 </Link>
               </li>
               <li>
-                <Link to="/passport" className="text-slate-400 hover:text-amber-400 transition-colors">
-                  Verifiable Proof Passport
+                <Link to="/share" className="text-slate-400 hover:text-amber-400 transition-colors">
+                  Share Public Portfolio
                 </Link>
               </li>
             </ul>

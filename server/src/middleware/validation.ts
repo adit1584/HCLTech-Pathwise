@@ -83,5 +83,6 @@ export const assistantChatSchema = z.object({
 export const whatIfSchema = z.object({
   weeklyHours: z.number().min(1).max(80).optional(),
   targetRole: z.string().optional(),
+  secondaryRole: z.string().optional().nullable(),
   skipSkills: z.array(z.string()).optional(),
 });

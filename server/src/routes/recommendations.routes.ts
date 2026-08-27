@@ -4,7 +4,7 @@ import { LearnerModel } from '../models/Learner.js';
 import { SkillModel } from '../models/Skill.js';
 import { computePriorityScores } from '../engine/priority-scorer.js';
 import { getDirectDependents } from '../engine/centrality.js';
-import { loadRolesData } from '../utils/load-data.js';
+import { resolveOrSynthesizeRole } from '../utils/dynamic-roles.js';
 import type { Skill, SkillState, RecommendationTrace } from '../models/types.js';
 
 const router = Router();
@@ -19,13 +19,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     }
 
     const activeGoal = learner.goals[learner.goals.length - 1];
-    const roles = loadRolesData();
-    const targetRole = roles.find((r: any) => r.id === (activeGoal as any).targetRole);
-
-    if (!targetRole) {
-      res.status(400).json({ error: 'Target role not found' });
-      return;
-    }
+    const targetRole = await resolveOrSynthesizeRole((activeGoal as any).targetRole);
 
     const allSkillDocs = await SkillModel.find({}).lean();
     const allSkills: Skill[] = allSkillDocs.map(s => ({
@@ -65,13 +59,7 @@ router.get('/:skillId/trace', authMiddleware, async (req: AuthRequest, res: Resp
     }
 
     const activeGoal = learner.goals[learner.goals.length - 1];
-    const roles = loadRolesData();
-    const targetRole = roles.find((r: any) => r.id === (activeGoal as any).targetRole);
-
-    if (!targetRole) {
-      res.status(400).json({ error: 'Target role not found' });
-      return;
-    }
+    const targetRole = await resolveOrSynthesizeRole((activeGoal as any).targetRole);
 
     const allSkillDocs = await SkillModel.find({}).lean();
     const allSkills: Skill[] = allSkillDocs.map(s => ({

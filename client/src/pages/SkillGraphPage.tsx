@@ -34,16 +34,34 @@ import {
   BookOpen,
   LayoutGrid,
   GitBranch,
+  Briefcase,
 } from 'lucide-react';
 import { RecommendationTraceModal } from '../components/RecommendationTraceModal';
 
-// ── Tier Configuration ─────────────────────────────────────────────────────
+// ── Tier / Milestone Configuration ─────────────────────────────────────────
 const TIER_META: Record<number, { title: string; subtitle: string; color: string; badge: string }> = {
-  0: { title: 'Tier 1: Foundations', subtitle: 'Zero prerequisite foundational building blocks', color: '#10b981', badge: 'Foundations' },
-  1: { title: 'Tier 2: Applied Core', subtitle: 'Core applied libraries and essential techniques', color: '#0ea5e9', badge: 'Core Applied' },
-  2: { title: 'Tier 3: Frameworks & Modeling', subtitle: 'Production frameworks, architectures and algorithms', color: '#f59e0b', badge: 'Frameworks' },
-  3: { title: 'Tier 4: Mastery & Capstones', subtitle: 'Advanced systems, production deployment and capstone integration', color: '#8b5cf6', badge: 'Mastery' },
+  0: { title: 'Milestone 1: Foundations', subtitle: 'Zero-prerequisite core building blocks & systems', color: '#10b981', badge: 'Milestone 1' },
+  1: { title: 'Milestone 2: Applied Core', subtitle: 'Core applied frameworks and essential tooling', color: '#0ea5e9', badge: 'Milestone 2' },
+  2: { title: 'Milestone 3: Advanced Systems', subtitle: 'Distributed architectures, security & modeling', color: '#f59e0b', badge: 'Milestone 3' },
+  3: { title: 'Milestone 4: Production & Capstones', subtitle: 'Production deployment, cloud architecture & mastery', color: '#8b5cf6', badge: 'Milestone 4' },
 };
+
+const POPULAR_GRAPH_ROLES = [
+  { id: 'full-stack-developer', name: 'Full Stack Developer' },
+  { id: 'frontend-developer', name: 'Frontend Developer' },
+  { id: 'backend-developer', name: 'Backend Developer' },
+  { id: 'cybersecurity-analyst', name: 'Cybersecurity Analyst' },
+  { id: 'devops-engineer', name: 'DevOps & Cloud Engineer' },
+  { id: 'blockchain-developer', name: 'Blockchain Developer' },
+  { id: 'data-scientist', name: 'Data Scientist' },
+  { id: 'machine-learning-engineer', name: 'ML & AI Engineer' },
+  { id: 'mobile-developer', name: 'Mobile Developer' },
+  { id: 'data-engineer', name: 'Data Engineer' },
+  { id: 'ui-ux-designer', name: 'UI/UX Designer' },
+  { id: 'product-manager', name: 'Product Manager' },
+  { id: 'game-developer', name: 'Game Developer' },
+  { id: '3d-animator', name: '3D Animator' },
+];
 
 export const SkillGraphPage: React.FC = () => {
   const navigate = useNavigate();
@@ -51,6 +69,8 @@ export const SkillGraphPage: React.FC = () => {
   const [skills, setSkills] = useState<SkillNode[]>([]);
   const [skillStates, setSkillStates] = useState<{ [id: string]: SkillState }>({});
   const [targetRole, setTargetRole] = useState<string>('full-stack-developer');
+  const [targetRoleDisplayName, setTargetRoleDisplayName] = useState<string>('Full Stack Developer');
+  const [totalRoleSkillsCount, setTotalRoleSkillsCount] = useState<number>(0);
   const [targetRoleSkills, setTargetRoleSkills] = useState<Set<string>>(new Set());
   const [selectedSkill, setSelectedSkill] = useState<SkillNode | null>(null);
   const [traceSkillId, setTraceSkillId] = useState<string | null>(null);
@@ -63,62 +83,58 @@ export const SkillGraphPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'COMPLETED' | 'IN_PROGRESS' | 'READY' | 'LOCKED'>('ALL');
   const [loading, setLoading] = useState(true);
 
-  // Load Graph and Profile Data
+  // Load Graph for a specific role
+  const loadGraphForRole = useCallback(async (roleId?: string) => {
+    try {
+      setLoading(true);
+      const [graphData, profileData] = await Promise.all([
+        api.getSkillGraph(roleId),
+        api.getProfile().catch(() => null),
+      ]);
+
+      setSkills(graphData.nodes || []);
+      if (graphData.role) setTargetRoleDisplayName(graphData.role);
+      if (graphData.totalRequiredSkills) setTotalRoleSkillsCount(graphData.totalRequiredSkills);
+
+      const stateMap: { [id: string]: SkillState } = {};
+      (profileData?.skillStates || []).forEach(s => {
+        stateMap[s.skillId] = s;
+      });
+      setSkillStates(stateMap);
+
+      const roleSkillSet = new Set<string>();
+      (graphData.nodes || []).forEach(node => {
+        if (node.isRequired) {
+          roleSkillSet.add(node.id);
+        }
+      });
+      setTargetRoleSkills(roleSkillSet);
+    } catch (err) {
+      console.error('Failed to load skill graph:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Initial Load
   useEffect(() => {
-    const loadGraphData = async () => {
+    const init = async () => {
       try {
-        setLoading(true);
-        const [graphData, profileData, currentPath] = await Promise.all([
-          api.getSkillGraph(),
-          api.getProfile().catch(() => null),
-          api.getCurrentPath().catch(() => null),
-        ]);
-
-        setSkills(graphData.nodes || []);
-
-        const stateMap: { [id: string]: SkillState } = {};
-        (profileData?.skillStates || []).forEach(s => {
-          stateMap[s.skillId] = s;
-        });
-        setSkillStates(stateMap);
-
+        const profileData = await api.getProfile().catch(() => null);
         const goalRole = profileData?.goals?.[profileData.goals.length - 1]?.targetRole || 'full-stack-developer';
         setTargetRole(goalRole);
-
-        // Extract required skills for current target role
-        const roleSkillSet = new Set<string>();
-        (currentPath?.roadmap || []).forEach(item => {
-          (item.skillIds || []).forEach(s => roleSkillSet.add(s));
-        });
-
-        // If roadmap doesn't have them yet, find matching role
-        if (roleSkillSet.size === 0) {
-          try {
-            const rolesRes = await api.getRoles();
-            const foundRole = rolesRes.roles.find(r => r.id === goalRole);
-            if (foundRole?.requiredSkills) {
-              foundRole.requiredSkills.forEach(req => roleSkillSet.add(req.skillId));
-            }
-          } catch {
-            // fallback
-          }
-        }
-
-        // Defaults if empty
-        if (roleSkillSet.size === 0) {
-          ['python', 'javascript', 'react', 'nodejs', 'sql', 'html-css', 'git'].forEach(s => roleSkillSet.add(s));
-        }
-
-        setTargetRoleSkills(roleSkillSet);
-      } catch (err) {
-        console.error('Failed to load skill graph:', err);
-      } finally {
-        setLoading(false);
+        await loadGraphForRole(goalRole);
+      } catch {
+        await loadGraphForRole('full-stack-developer');
       }
     };
+    init();
+  }, [loadGraphForRole]);
 
-    loadGraphData();
-  }, []);
+  const handleRoleChange = (newRoleId: string) => {
+    setTargetRole(newRoleId);
+    loadGraphForRole(newRoleId);
+  };
 
   // Compute Topological Depths / Tiers for all skills
   const skillTiers = useMemo<{ [id: string]: number }>(() => {
@@ -127,10 +143,15 @@ export const SkillGraphPage: React.FC = () => {
 
     const computeDepth = (id: string, visited = new Set<string>()): number => {
       if (depths[id] !== undefined) return depths[id];
-      if (visited.has(id)) return 0; // Avoid cycles
+      if (visited.has(id)) return 0;
       visited.add(id);
 
       const skill = skillMap.get(id);
+      if (skill?.milestone && skill.milestone >= 1 && skill.milestone <= 4) {
+        depths[id] = skill.milestone - 1;
+        return depths[id];
+      }
+
       if (!skill || !skill.prerequisites || skill.prerequisites.length === 0) {
         depths[id] = 0;
         return 0;
@@ -141,7 +162,7 @@ export const SkillGraphPage: React.FC = () => {
         maxPrereqDepth = Math.max(maxPrereqDepth, computeDepth(p, new Set(visited)) + 1);
       }
 
-      depths[id] = Math.min(maxPrereqDepth, 3); // max 4 tiers (0-3)
+      depths[id] = Math.min(maxPrereqDepth, 3);
       return depths[id];
     };
 
@@ -391,12 +412,12 @@ export const SkillGraphPage: React.FC = () => {
       {/* ── Top Command Bar ────────────────────────────────────────── */}
       <div className="p-4 px-6 bg-[var(--bg-surface)] border-b border-[var(--border-dim)] flex flex-col md:flex-row md:items-center justify-between gap-3 z-10">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[rgba(245,158,11,0.12)] border border-[rgba(245,158,11,0.28)] text-[var(--primary-300)]">
-              <Network size={11} /> PREREQUISITE DAG
+              <Network size={11} /> DYNAMIC PREREQUISITE DAG
             </span>
-            <span className="text-[11px] font-mono text-[var(--text-muted)]">
-              Target: <strong className="text-[var(--text-primary)]">{targetRole}</strong>
+            <span className="badge badge-cyan text-[10px] font-mono font-bold flex items-center gap-1">
+              <Target size={10} /> {targetRoleDisplayName} ({totalRoleSkillsCount || targetRoleSkills.size} Skills in Path)
             </span>
           </div>
           <h1 className="text-lg font-bold text-[var(--text-primary)] font-display tracking-tight">
@@ -406,6 +427,29 @@ export const SkillGraphPage: React.FC = () => {
 
         {/* View Switcher & Controls */}
         <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Dynamic Role Switcher Dropdown */}
+          <div className="flex items-center gap-1.5 bg-[var(--bg-void)] px-3 py-1.5 rounded-xl border border-[var(--border-subtle)]">
+            <Briefcase size={13} className="text-[var(--primary-400)] shrink-0" />
+            <select
+              value={targetRole}
+              onChange={e => handleRoleChange(e.target.value)}
+              className="bg-transparent text-[11px] font-mono font-bold text-[var(--text-primary)] outline-none cursor-pointer pr-1"
+            >
+              <optgroup label="Active Target">
+                <option value={targetRole} className="bg-slate-900 text-amber-300 font-bold">
+                  ★ Active: {targetRoleDisplayName}
+                </option>
+              </optgroup>
+              <optgroup label="Explore Other Roles">
+                {POPULAR_GRAPH_ROLES.filter(r => r.id !== targetRole).map(r => (
+                  <option key={r.id} value={r.id} className="bg-slate-900 text-white">
+                    {r.name}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          </div>
+
           {/* Target Role Only Toggle */}
           <button
             onClick={() => setRoleOnly(r => !r)}
@@ -414,10 +458,10 @@ export const SkillGraphPage: React.FC = () => {
                 ? 'bg-[var(--primary-500)] text-slate-950 font-bold border-transparent shadow-[0_2px_10px_-2px_rgba(245,158,11,0.5)]'
                 : 'bg-[var(--bg-void)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
-            title={roleOnly ? 'Showing only skills required for your target role' : 'Showing all global skills in the universe'}
+            title={roleOnly ? 'Showing only skills required for the selected role' : 'Showing all global skills in the universe'}
           >
             <Target size={12} />
-            <span>{roleOnly ? 'My Goal Skills Only' : 'All Universe Skills'}</span>
+            <span>{roleOnly ? 'Role Roadmap Skills' : 'All Universe Skills'}</span>
           </button>
 
           {/* View Mode Toggle */}
@@ -668,31 +712,39 @@ export const SkillGraphPage: React.FC = () => {
                     {selectedSkill.category}
                   </span>
                   <span className="text-[10px] font-mono text-[var(--text-muted)]">
-                    Tier {(skillTiers[selectedSkill.id] ?? 0) + 1}
+                    {TIER_META[skillTiers[selectedSkill.id] ?? 0]?.badge || `Milestone ${(skillTiers[selectedSkill.id] ?? 0) + 1}`}
                   </span>
+                  {selectedSkill.isRequired && (
+                    <span className="badge badge-emerald text-[9px] font-mono font-bold">
+                      🎯 Core Role Target
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-lg font-bold text-[var(--text-primary)] font-display leading-snug">
                   {selectedSkill.name}
                 </h3>
               </div>
 
-              {/* Mastery & Confidence Gauge */}
+              {/* Role Target & Mastery Comparison */}
               <div className="p-4 rounded-xl bg-[var(--bg-void)] border border-[var(--border-dim)] space-y-2.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-[var(--text-muted)] font-mono">Calibrated Mastery</span>
+                  <span className="text-[var(--text-muted)] font-mono">Current Mastery</span>
                   <span className="font-mono font-bold text-[var(--primary-300)] text-sm">
                     {skillStates[selectedSkill.id]?.proficiency ?? 0}%
+                    <span className="text-[10px] text-[var(--text-muted)] font-normal ml-1">
+                      / {selectedSkill.targetProficiency || 75}% Target
+                    </span>
                   </span>
                 </div>
                 <div className="w-full h-2 rounded-full bg-[var(--bg-surface)] border border-[var(--border-dim)] overflow-hidden">
                   <div
                     className="h-full bg-[var(--primary-500)] rounded-full transition-all"
-                    style={{ width: `${skillStates[selectedSkill.id]?.proficiency ?? 0}%` }}
+                    style={{ width: `${Math.min(100, skillStates[selectedSkill.id]?.proficiency ?? 0)}%` }}
                   />
                 </div>
                 <div className="text-[10px] text-[var(--text-muted)] font-mono flex justify-between">
                   <span>Confidence: {Math.round((skillStates[selectedSkill.id]?.confidence ?? 0.5) * 100)}%</span>
-                  <span>{skillStates[selectedSkill.id]?.evidence?.length ?? 0} evidence logged</span>
+                  <span>Est: ~{selectedSkill.estimatedHours} hrs</span>
                 </div>
               </div>
 
@@ -755,15 +807,22 @@ export const SkillGraphPage: React.FC = () => {
             {/* Bottom Actions */}
             <div className="pt-4 border-t border-[var(--border-dim)] space-y-2">
               <button
+                onClick={() => navigate('/roadmap')}
+                className="btn btn-primary w-full justify-center text-xs py-2.5 flex items-center gap-1.5"
+              >
+                <Layers size={13} />
+                <span>View in Active Roadmap ↗</span>
+              </button>
+              <button
                 onClick={() => navigate('/practice')}
-                className="btn btn-primary w-full justify-center text-xs py-2.5"
+                className="btn btn-secondary w-full justify-center text-xs py-2 flex items-center gap-1.5"
               >
                 <BookOpen size={13} />
                 <span>Practice in Learning Arena</span>
               </button>
               <button
                 onClick={() => setTraceSkillId(selectedSkill.id)}
-                className="btn btn-ghost w-full justify-center text-xs py-2"
+                className="btn btn-ghost w-full justify-center text-xs py-1.5 text-[var(--text-muted)]"
               >
                 <Eye size={13} />
                 <span>Inspect Recommendation Trace</span>

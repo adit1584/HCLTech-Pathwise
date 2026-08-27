@@ -48,9 +48,12 @@ router.post('/chat', authMiddleware, async (req: AuthRequest, res: Response) => 
       type: item.type,
       milestone: item.milestone,
       status: item.status,
-      priorityScore: item.priorityScore,
-      reason: item.reason,
+      priorityScore: item.priorityScore || 1,
+      reason: item.reason || '',
     }));
+
+    const completedItems = currentRoadmap.filter(i => i.status === 'completed');
+    const availableItem = currentRoadmap.find(i => i.status === 'available' || i.status === 'in_progress') || currentRoadmap[0];
 
     const assistantResponse = await askAssistant(
       parsed.data.message,

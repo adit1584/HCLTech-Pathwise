@@ -17,6 +17,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   demoLogin: () => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
+  sendOtp: (name: string, email: string, password: string) => Promise<{ success: boolean; message: string; email: string; devOtp?: string }>;
+  verifyOtp: (email: string, otp: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -65,6 +67,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(res.user);
   };
 
+  const sendOtp = async (name: string, email: string, password: string) => {
+    return await api.sendOtp({ name, email, password });
+  };
+
+  const verifyOtp = async (email: string, otp: string) => {
+    const res = await api.verifyOtp({ email, otp });
+    localStorage.setItem('pathwise_token', res.token);
+    setToken(res.token);
+    setUser(res.user);
+  };
+
   const register = async (name: string, email: string, password: string) => {
     const res = await api.register({ name, email, password });
     localStorage.setItem('pathwise_token', res.token);
@@ -87,6 +100,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         demoLogin,
         register,
+        sendOtp,
+        verifyOtp,
         logout,
         refreshUser: fetchCurrentUser,
       }}

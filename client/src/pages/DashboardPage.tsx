@@ -25,6 +25,7 @@ import {
   Brain,
   RotateCcw,
   Target,
+  Shuffle,
 } from 'lucide-react';
 import { RecommendationTraceModal } from '../components/RecommendationTraceModal';
 import { MicroSparkModal } from '../components/MicroSparkModal';
@@ -84,18 +85,51 @@ export const DashboardPage: React.FC = () => {
   const [isSparkOpen, setIsSparkOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Completed items state — synced with localStorage & roadmap
+  const [completedItemIds, setCompletedItemIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('pathwise_completed_item_ids');
+      if (!saved) return new Set();
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        return new Set(
+          parsed.filter((id: any) =>
+            typeof id === 'string' &&
+            id.trim().length > 3 &&
+            id !== 'undefined' &&
+            id !== 'null'
+          )
+        );
+      }
+      return new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
   const loadDashboardData = async () => {
     try {
+      // Re-read local storage on load
+      const saved = localStorage.getItem('pathwise_completed_item_ids');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            setCompletedItemIds(new Set(parsed.filter((id: any) => typeof id === 'string' && id.trim().length > 3)));
+          }
+        } catch { /* ignore */ }
+      }
+
       setLoading(true);
       const [prof, recs, road] = await Promise.all([
-        api.getProfile(),
-        api.getRecommendations(),
-        api.getCurrentPath(),
+        api.getProfile().catch(() => null),
+        api.getRecommendations().catch(() => ({ recommendations: [] })),
+        api.getCurrentPath().catch(() => api.compilePath().catch(() => ({ roadmap: [], totalEstimatedWeeks: 12 }))),
       ]);
-      setProfile(prof);
-      setRecommendations(recs.recommendations || []);
-      setRoadmap(road.roadmap || []);
-      setTotalWeeks(road.totalEstimatedWeeks || 0);
+      if (prof) setProfile(prof);
+      setRecommendations(recs?.recommendations || []);
+      setRoadmap(road?.roadmap || []);
+      setTotalWeeks(road?.totalEstimatedWeeks || 12);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
     } finally {
@@ -103,49 +137,77 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
-  useEffect(() => { loadDashboardData(); }, []);
+  useEffect(() => {
+    loadDashboardData();
 
-  const nextBestGap = recommendations[0];
-  const nextActionItem = roadmap.find(i => i.status === 'available') || roadmap[0];
-  const activeGoal = profile?.goals?.[profile?.goals?.length - 1];
-  const targetRoleName = (activeGoal?.targetRole || 'data-scientist').replace(/-/g, ' ');
-  const skillStates = profile?.skillStates || [];
-  const avgProficiency = skillStates.length > 0
-    ? Math.round(skillStates.reduce((s, k) => s + k.proficiency, 0) / skillStates.length)
-    : 50;
-
-  // Local & Backend Completed State Sync
-  const localCompletedSet = useMemo(() => {
-    try {
+    // Re-sync stats when window gets focus
+    const onFocus = () => {
       const saved = localStorage.getItem('pathwise_completed_item_ids');
-      return saved ? new Set<string>(JSON.parse(saved)) : new Set<string>();
-    } catch {
-      return new Set<string>();
-    }
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            setCompletedItemIds(new Set(parsed.filter((id: any) => typeof id === 'string' && id.trim().length > 3)));
+          }
+        } catch { /* ignore */ }
+      }
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, []);
 
+  // Helper to check if any roadmap item is completed
+  const isItemDone = (item: RoadmapItem) => {
+    if (item.status === 'completed') return true;
+    if (item.id && completedItemIds.has(item.id)) return true;
+    const fallbackKey = `roadmap-${item.type || 'skill'}-${item.skillIds?.[0] || 'skill'}-${(item.title || 'step').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+    return completedItemIds.has(fallbackKey);
+  };
+
+  const nextBestGap = recommendations[0];
+  const nextActionItem = roadmap.find(i => !isItemDone(i) && (i.status === 'available' || i.status === 'in_progress')) || roadmap.find(i => !isItemDone(i)) || roadmap[0];
+  const activeGoal = profile?.goals?.[profile?.goals?.length - 1];
+  const targetRoleName = (activeGoal?.targetRole || 'Full Stack Developer').replace(/-/g, ' ');
+  const skillStates = profile?.skillStates || [];
+  
   const weeklyStudyHours = profile?.weeklyHours || (profile as any)?.preferences?.weeklyHours || 10;
 
+  const totalSteps = roadmap.length;
+  const completedCount = useMemo(() => {
+    return roadmap.filter(isItemDone).length;
+  }, [roadmap, completedItemIds]);
+
+  const availableCount = useMemo(() => {
+    return roadmap.filter(i => !isItemDone(i)).length;
+  }, [roadmap, completedItemIds]);
+
   const totalEstimatedHours = useMemo(() => {
-    const sum = roadmap.reduce((acc, item) => acc + (item.estimatedHours || 3), 0);
-    return sum > 0 ? Number(sum.toFixed(2)) : 48;
+    const sum = roadmap.reduce((acc, item) => acc + (item.estimatedHours || 5), 0);
+    return sum > 0 ? Number(sum.toFixed(1)) : 48;
   }, [roadmap]);
 
   const completedHours = useMemo(() => {
     const sum = roadmap.reduce((acc, item) => {
-      const isDone = item.status === 'completed' || localCompletedSet.has(item.id);
-      return isDone ? acc + (item.estimatedHours || 3) : acc;
+      return isItemDone(item) ? acc + (item.estimatedHours || 5) : acc;
     }, 0);
-    return Number(sum.toFixed(2));
-  }, [roadmap, localCompletedSet]);
+    return Number(sum.toFixed(1));
+  }, [roadmap, completedItemIds]);
 
-  const completedCount = useMemo(() => {
-    return roadmap.filter(i => i.status === 'completed' || localCompletedSet.has(i.id)).length;
-  }, [roadmap, localCompletedSet]);
+  const progressPercent = totalSteps > 0
+    ? Math.min(100, Math.round((completedCount / totalSteps) * 100))
+    : 0;
 
-  const availableCount = roadmap.filter(i => i.status === 'available' && !localCompletedSet.has(i.id)).length;
-  const remainingHours = Number(Math.max(0, totalEstimatedHours - completedHours).toFixed(2));
+  const remainingHours = Number(Math.max(0, totalEstimatedHours - completedHours).toFixed(1));
   const remainingWeeks = remainingHours === 0 ? 0 : Math.max(1, Math.ceil(remainingHours / weeklyStudyHours));
+
+  // Dynamic calculated readiness based on completed steps & profile skill proficiencies
+  const avgProficiency = useMemo(() => {
+    const baseProf = skillStates.length > 0
+      ? Math.round(skillStates.reduce((s, k) => s + k.proficiency, 0) / skillStates.length)
+      : 30;
+    // Blend with roadmap progress percentage
+    return Math.min(100, Math.max(baseProf, Math.round(baseProf * 0.5 + progressPercent * 0.5)));
+  }, [skillStates, progressPercent]);
 
   // Dynamic Target Completion Date
   const targetCompletionDate = useMemo(() => {
@@ -153,10 +215,6 @@ export const DashboardPage: React.FC = () => {
     d.setDate(d.getDate() + remainingWeeks * 7);
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }, [remainingWeeks]);
-
-  const progressPercent = totalEstimatedHours > 0
-    ? Math.min(100, Number(((completedHours / totalEstimatedHours) * 100).toFixed(2)))
-    : 0;
 
   if (loading && !profile) {
     return (
@@ -203,9 +261,9 @@ export const DashboardPage: React.FC = () => {
             <span>90s Recall</span>
           </button>
 
-          <Link to="/what-if" className="btn btn-ghost btn-sm text-[12px] font-mono flex items-center gap-1.5">
-            <Zap size={13} className="text-[var(--primary-400)]" />
-            <span>What-If Planner</span>
+          <Link to="/simulator" className="btn btn-ghost btn-sm text-[12px] font-mono flex items-center gap-1.5 border border-[var(--border-subtle)] hover:border-[var(--primary-400)]">
+            <Shuffle size={13} className="text-[var(--primary-400)]" />
+            <span>Career Simulator</span>
           </Link>
 
           <Link to="/roadmap" id="dashboard-roadmap-link" className="btn btn-primary btn-sm text-[12px] flex items-center gap-1.5 shadow-sm">
@@ -213,6 +271,30 @@ export const DashboardPage: React.FC = () => {
             <span>View Roadmap</span>
           </Link>
         </div>
+      </div>
+
+      {/* ── Career Path Pivot Banner ───────────────────────────────── */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-cyan-500/10 to-transparent border border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-up">
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <span className="badge badge-amber text-[9px] font-mono font-bold flex items-center gap-1">
+              <Shuffle size={10} /> CAREER PATH SIMULATOR
+            </span>
+            <span className="text-[12px] font-bold text-white">
+              Current Target: {targetRoleName}
+            </span>
+          </div>
+          <p className="text-[11px] text-[var(--text-secondary)]">
+            Want to pivot? Test switching to any custom career role, simulate dual-track hybrid synergy, swap individual course tracks, or adjust study velocity.
+          </p>
+        </div>
+        <Link
+          to="/simulator"
+          className="btn btn-primary text-xs font-mono px-4 py-2 flex items-center gap-1.5 shrink-0 self-start sm:self-auto"
+        >
+          <Shuffle size={12} />
+          <span>Launch Career Simulator ↗</span>
+        </Link>
       </div>
 
       {/* ── KPI Strip ────────────────────────────────────────────────── */}
@@ -391,7 +473,7 @@ export const DashboardPage: React.FC = () => {
 
           <div className="space-y-2.5">
             {roadmap.slice(0, 4).map((item, idx) => {
-              const isDone = item.status === 'completed' || localCompletedSet.has(item.id);
+              const isDone = isItemDone(item);
               const isAvail = item.status === 'available' && !isDone;
 
               return (

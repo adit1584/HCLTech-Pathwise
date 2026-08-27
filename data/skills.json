@@ -416,5 +416,237 @@
     ],
     "difficulty": 2,
     "estimatedHours": 15
+  },
+  {
+    "skillId": "linux",
+    "name": "Linux & Bash Scripting",
+    "category": "Systems",
+    "description": "Linux command line, file permissions, process management, shell scripting, and system administration.",
+    "prerequisites": [],
+    "relatedSkills": ["git", "docker", "networking"],
+    "roleImportance": [
+      { "roleId": "devops-engineer", "importance": 0.95 },
+      { "roleId": "cybersecurity-analyst", "importance": 0.92 },
+      { "roleId": "backend-developer", "importance": 0.85 }
+    ],
+    "difficulty": 2,
+    "estimatedHours": 20
+  },
+  {
+    "skillId": "networking",
+    "name": "Computer Networking",
+    "category": "Systems",
+    "description": "TCP/IP model, DNS, HTTP/HTTPS, routing, subnets, firewalls, and network troubleshooting.",
+    "prerequisites": [],
+    "relatedSkills": ["linux", "cybersecurity-fundamentals", "api-design"],
+    "roleImportance": [
+      { "roleId": "cybersecurity-analyst", "importance": 0.95 },
+      { "roleId": "devops-engineer", "importance": 0.88 },
+      { "roleId": "backend-developer", "importance": 0.78 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 25
+  },
+  {
+    "skillId": "cybersecurity-fundamentals",
+    "name": "Cybersecurity Fundamentals",
+    "category": "Security",
+    "description": "Threat modeling, cryptography, vulnerability assessment, OWASP Top 10, authentication, and defensive security.",
+    "prerequisites": ["networking", "linux"],
+    "relatedSkills": ["ethical-hacking", "python"],
+    "roleImportance": [
+      { "roleId": "cybersecurity-analyst", "importance": 0.98 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 35
+  },
+  {
+    "skillId": "ethical-hacking",
+    "name": "Ethical Hacking & Penetration Testing",
+    "category": "Security",
+    "description": "Penetration testing methodologies, reconnaissance, exploitation frameworks (Metasploit, Burp Suite), and privilege escalation.",
+    "prerequisites": ["cybersecurity-fundamentals", "python", "networking"],
+    "relatedSkills": ["linux"],
+    "roleImportance": [
+      { "roleId": "cybersecurity-analyst", "importance": 0.92 }
+    ],
+    "difficulty": 4,
+    "estimatedHours": 40
+  },
+  {
+    "skillId": "solidity",
+    "name": "Solidity Programming",
+    "category": "Blockchain",
+    "description": "Smart contract development with Solidity on Ethereum EVM — state variables, modifiers, events, and security.",
+    "prerequisites": ["javascript"],
+    "relatedSkills": ["smart-contracts", "web3"],
+    "roleImportance": [
+      { "roleId": "blockchain-developer", "importance": 0.98 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 35
+  },
+  {
+    "skillId": "smart-contracts",
+    "name": "Smart Contract Architecture & Security",
+    "category": "Blockchain",
+    "description": "Hardhat/Foundry workflows, ERC20/ERC721 standards, reentrancy guards, and formal verification.",
+    "prerequisites": ["solidity", "git"],
+    "relatedSkills": ["web3", "testing"],
+    "roleImportance": [
+      { "roleId": "blockchain-developer", "importance": 0.95 }
+    ],
+    "difficulty": 4,
+    "estimatedHours": 30
+  },
+  {
+    "skillId": "web3",
+    "name": "Web3 & dApp Integration",
+    "category": "Blockchain",
+    "description": "Building decentralized applications using Ethers.js, Wagmi, IPFS, and wallet connectivity with MetaMask.",
+    "prerequisites": ["javascript", "react", "solidity"],
+    "relatedSkills": ["typescript", "api-design"],
+    "roleImportance": [
+      { "roleId": "blockchain-developer", "importance": 0.90 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 25
+  },
+  {
+    "skillId": "system-design",
+    "name": "System Design & Architecture",
+    "category": "Architecture",
+    "description": "Scalable systems, microservices, load balancing, caching (Redis), message queues (Kafka), and database sharding.",
+    "prerequisites": ["api-design", "sql", "docker"],
+    "relatedSkills": ["deployment", "aws-cloud"],
+    "roleImportance": [
+      { "roleId": "backend-developer", "importance": 0.95 },
+      { "roleId": "devops-engineer", "importance": 0.90 },
+      { "roleId": "full-stack-developer", "importance": 0.88 }
+    ],
+    "difficulty": 4,
+    "estimatedHours": 35
+  },
+  {
+    "skillId": "kubernetes",
+    "name": "Kubernetes & Orchestration",
+    "category": "DevOps",
+    "description": "Deploying, scaling, and managing containerized applications with Pods, Deployments, Services, Ingress, and Helm.",
+    "prerequisites": ["docker", "linux", "networking"],
+    "relatedSkills": ["deployment", "aws-cloud"],
+    "roleImportance": [
+      { "roleId": "devops-engineer", "importance": 0.95 }
+    ],
+    "difficulty": 4,
+    "estimatedHours": 35
+  },
+  {
+    "skillId": "aws-cloud",
+    "name": "AWS Cloud Architecture",
+    "category": "Cloud",
+    "description": "Core AWS services (EC2, S3, RDS, Lambda, ECS, CloudFront, IAM) and Infrastructure as Code with Terraform.",
+    "prerequisites": ["linux", "networking", "docker"],
+    "relatedSkills": ["kubernetes", "deployment"],
+    "roleImportance": [
+      { "roleId": "devops-engineer", "importance": 0.92 },
+      { "roleId": "backend-developer", "importance": 0.85 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 35
+  },
+  {
+    "skillId": "flutter",
+    "name": "Flutter & Dart Mobile Development",
+    "category": "Mobile",
+    "description": "Cross-platform mobile applications for iOS and Android with Flutter widgets, state management (Bloc/Riverpod), and native APIs.",
+    "prerequisites": ["javascript"],
+    "relatedSkills": ["api-design", "git"],
+    "roleImportance": [
+      { "roleId": "mobile-developer", "importance": 0.95 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 40
+  },
+  {
+    "skillId": "react-native",
+    "name": "React Native",
+    "category": "Mobile",
+    "description": "Mobile app development with React Native, Expo, navigation, animations, and native device integrations.",
+    "prerequisites": ["react", "javascript", "typescript"],
+    "relatedSkills": ["api-design", "testing"],
+    "roleImportance": [
+      { "roleId": "mobile-developer", "importance": 0.92 },
+      { "roleId": "frontend-developer", "importance": 0.85 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 35
+  },
+  {
+    "skillId": "graphql",
+    "name": "GraphQL APIs",
+    "category": "Backend",
+    "description": "Schema definition, queries, mutations, resolvers, Apollo Server/Client, and real-time subscriptions.",
+    "prerequisites": ["nodejs", "typescript"],
+    "relatedSkills": ["api-design", "react"],
+    "roleImportance": [
+      { "roleId": "full-stack-developer", "importance": 0.82 },
+      { "roleId": "backend-developer", "importance": 0.85 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 20
+  },
+  {
+    "skillId": "ui-ux-design",
+    "name": "UI/UX Design & Design Systems",
+    "category": "Design",
+    "description": "User research, wireframing, high-fidelity Figma prototyping, typography, accessibility (WCAG), and component design systems.",
+    "prerequisites": ["html-css"],
+    "relatedSkills": ["react"],
+    "roleImportance": [
+      { "roleId": "ui-ux-designer", "importance": 0.98 },
+      { "roleId": "frontend-developer", "importance": 0.82 }
+    ],
+    "difficulty": 2,
+    "estimatedHours": 30
+  },
+  {
+    "skillId": "product-management",
+    "name": "Product Management & Strategy",
+    "category": "Product",
+    "description": "Product discovery, user stories, roadmapping, agile sprints, KPI tracking, A/B testing, and stakeholder alignment.",
+    "prerequisites": ["excel"],
+    "relatedSkills": ["sql", "eda", "data-visualization"],
+    "roleImportance": [
+      { "roleId": "product-manager", "importance": 0.98 }
+    ],
+    "difficulty": 2,
+    "estimatedHours": 30
+  },
+  {
+    "skillId": "game-development",
+    "name": "Game Development Fundamentals",
+    "category": "Game Dev",
+    "description": "Game engine architectures, physics, collision detection, game loops, sound, and asset pipeline in Unity / Godot / Unreal.",
+    "prerequisites": ["python"],
+    "relatedSkills": ["3d-modeling-fundamentals", "git"],
+    "roleImportance": [
+      { "roleId": "game-developer", "importance": 0.95 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 40
+  },
+  {
+    "skillId": "blender-3d",
+    "name": "Blender 3D Modeling & Rendering",
+    "category": "3D & Animation",
+    "description": "Hard-surface and organic 3D modeling, UV unwrapping, PBR texturing, lighting, and Cycles/Eevee rendering.",
+    "prerequisites": [],
+    "relatedSkills": ["3d-modeling-fundamentals", "game-development"],
+    "roleImportance": [
+      { "roleId": "3d-animator", "importance": 0.95 },
+      { "roleId": "game-developer", "importance": 0.85 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 35
   }
 ]

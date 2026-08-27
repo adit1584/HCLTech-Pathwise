@@ -18,6 +18,7 @@ import resourcesRoutes from './routes/resources.routes.js';
 import assistantRoutes from './routes/assistant.routes.js';
 import feedbackRoutes from './routes/feedback.routes.js';
 import simulatorRoutes from './routes/simulator.routes.js';
+import practiceRoutes from './routes/practice.routes.js';
 
 const app = express();
 
@@ -55,6 +56,7 @@ app.use('/api/resources', resourcesRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/assistant', assistantRoutes);
 app.use('/api/simulator', simulatorRoutes);
+app.use('/api/practice', practiceRoutes);
 
 // AI-heavy endpoints get rate limiting
 app.use('/api/assistant', aiLimiter);

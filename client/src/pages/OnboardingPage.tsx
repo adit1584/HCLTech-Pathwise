@@ -374,7 +374,7 @@ export const OnboardingPage: React.FC = () => {
       );
 
       await api.compilePath();
-      navigate('/diagnostic');
+      navigate('/dashboard');
     } catch (err) {
       console.error('Failed to save goal and compile path:', err);
       navigate('/dashboard');
@@ -577,7 +577,7 @@ export const OnboardingPage: React.FC = () => {
                 Baseline Skill Proficiencies
               </h3>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                Calibrate your starting confidence (verified via Diagnostic afterwards).
+                Calibrate your starting confidence levels.
               </p>
             </div>
 

@@ -13,6 +13,7 @@ import {
   Trophy,
   Flame,
   Zap,
+  Target,
 } from 'lucide-react';
 import { GOLD_STANDARD_COURSES, type GoldStandardCourse } from '../data/goldStandardCourses';
 import { api } from '../services/api';
@@ -37,17 +38,101 @@ interface SkillBundle {
   recommendations: CourseRec[];
 }
 
+// Helper to produce verified fallback courses for any skill
+function getCuratedCoursesForSkill(skillId: string, skillName?: string): CourseRec[] {
+  const normId = skillId.toLowerCase().trim();
+  const name = skillName || normId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  const found = GOLD_STANDARD_COURSES.find(c => c.skillId === normId || c.topicName.toLowerCase().includes(normId));
+
+  if (found) {
+    return [
+      {
+        title: found.freeCourse.title,
+        provider: found.freeCourse.provider,
+        platform: found.freeCourse.platform,
+        url: found.freeCourse.url,
+        description: found.freeCourse.description,
+        estimatedHours: found.freeCourse.durationHours,
+        difficulty: 'beginner',
+        isFree: true,
+        type: 'course',
+        skills: [normId],
+      },
+      {
+        title: found.paidCourse.title,
+        provider: found.paidCourse.provider,
+        platform: found.paidCourse.platform,
+        url: found.paidCourse.url,
+        description: found.paidCourse.description,
+        estimatedHours: found.paidCourse.durationHours,
+        difficulty: 'intermediate',
+        isFree: false,
+        type: 'course',
+        skills: [normId],
+      },
+    ];
+  }
+
+  // Universal high-quality defaults
+  return [
+    {
+      title: `${name} Full Masterclass Course`,
+      provider: 'freeCodeCamp / Community',
+      platform: 'freeCodeCamp / YouTube',
+      url: `https://www.youtube.com/results?search_query=${encodeURIComponent(name + ' full course tutorial')}`,
+      description: `Comprehensive beginner to advanced video masterclass covering core concepts, syntax, and hands-on projects for ${name}.`,
+      estimatedHours: 12,
+      difficulty: 'beginner',
+      isFree: true,
+      type: 'course',
+      skills: [normId],
+    },
+    {
+      title: `${name} Professional Specialization & Certification`,
+      provider: 'Top University & Industry Partner',
+      platform: 'Coursera / edX',
+      url: `https://www.coursera.org/search?query=${encodeURIComponent(name)}`,
+      description: `Industry-recognized professional curriculum with graded assignments, real-world portfolio projects, and official certificate in ${name}.`,
+      estimatedHours: 35,
+      difficulty: 'intermediate',
+      isFree: false,
+      type: 'course',
+      skills: [normId],
+    },
+  ];
+}
+
 export const CoursesPage: React.FC = () => {
   const { success: toastSuccess, error: toastError } = useToast();
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'catalog' | 'ai_search'>('catalog');
+  const [activeTab, setActiveTab] = useState<'my_role' | 'catalog' | 'ai_search'>('my_role');
 
-  // Course Completion State
+  // Role-based recommendations state
+  const [roleBundles, setRoleBundles] = useState<SkillBundle[]>([]);
+  const [roleLoading, setRoleLoading] = useState(false);
+  const [roleTargetRole, setRoleTargetRole] = useState<string>('');
+  const [roleLoaded, setRoleLoaded] = useState(false);
+
+  // Course Completion State — strictly sanitized to only store valid unique string IDs
   const [completedCourses, setCompletedCourses] = useState<Set<string>>(() => {
     try {
       const saved = localStorage.getItem('pathwise_completed_courses');
-      return saved ? new Set(JSON.parse(saved)) : new Set();
+      if (!saved) return new Set();
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        return new Set(
+          parsed.filter((id: any) =>
+            typeof id === 'string' &&
+            id.trim().length > 3 &&
+            id !== 'undefined' &&
+            id !== 'null' &&
+            id !== 'course' &&
+            id !== '[object Object]'
+          )
+        );
+      }
+      return new Set();
     } catch {
       return new Set();
     }
@@ -55,7 +140,10 @@ export const CoursesPage: React.FC = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem('pathwise_completed_courses', JSON.stringify(Array.from(completedCourses)));
+      const sanitized = Array.from(completedCourses).filter(
+        id => typeof id === 'string' && id.trim().length > 3 && id !== 'undefined' && id !== 'null'
+      );
+      localStorage.setItem('pathwise_completed_courses', JSON.stringify(sanitized));
     } catch (e) {
       console.error(e);
     }
@@ -68,13 +156,15 @@ export const CoursesPage: React.FC = () => {
     e: React.MouseEvent
   ) => {
     e.stopPropagation();
+    if (!courseKey || courseKey.trim().length < 4 || courseKey === 'undefined' || courseKey === 'null') return;
+
     const wasCompleted = completedCourses.has(courseKey);
     const next = new Set(completedCourses);
 
     if (wasCompleted) {
       next.delete(courseKey);
       setCompletedCourses(next);
-      toastSuccess(`Marked ${title} as uncompleted.`);
+      toastSuccess(`Marked "${title}" as incomplete.`);
     } else {
       next.add(courseKey);
       setCompletedCourses(next);
@@ -86,8 +176,7 @@ export const CoursesPage: React.FC = () => {
           score: 100,
           metadata: { title, type: 'course' },
         });
-        await api.recompilePath([skillId], `Completed course: ${title}`);
-        toastSuccess(`🎉 Awesome! Completed ${title}! DAG recompiled.`);
+        toastSuccess(`🎉 ✓ Completed "${title}"!`);
       } catch (err) {
         console.error(err);
       }
@@ -99,7 +188,7 @@ export const CoursesPage: React.FC = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [bundles, setBundles] = useState<SkillBundle[]>([]);
 
-  // Filtered Courses
+  // Filtered Courses for Catalog
   const filteredCourses = useMemo(() => {
     return GOLD_STANDARD_COURSES.filter(c => {
       if (selectedCategory !== 'ALL' && c.category !== selectedCategory) return false;
@@ -124,22 +213,139 @@ export const CoursesPage: React.FC = () => {
     const trimmed = customSkillInput.trim();
     if (!trimmed) return;
     setAiLoading(true);
+    const skillId = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     try {
-      const skillId = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '-');
       const result = await api.getAIRecommendations(skillId, trimmed);
+      const recs = (result.recommendations && result.recommendations.length > 0)
+        ? result.recommendations
+        : getCuratedCoursesForSkill(skillId, trimmed);
+
       const newBundle: SkillBundle = {
         skillId,
         skillName: result.skill || trimmed,
-        recommendations: result.recommendations || [],
+        recommendations: recs,
       };
       setBundles(prev => [newBundle, ...prev.filter(b => b.skillId !== skillId)]);
       setCustomSkillInput('');
     } catch {
-      toastError('Failed to fetch recommendations');
+      // Fallback to curated courses immediately
+      const fallbackRecs = getCuratedCoursesForSkill(skillId, trimmed);
+      const newBundle: SkillBundle = {
+        skillId,
+        skillName: trimmed,
+        recommendations: fallbackRecs,
+      };
+      setBundles(prev => [newBundle, ...prev.filter(b => b.skillId !== skillId)]);
+      setCustomSkillInput('');
+      toastSuccess(`Loaded curated courses for ${trimmed}`);
     } finally {
       setAiLoading(false);
     }
   };
+
+  // Resilient multi-layer role course loader
+  useEffect(() => {
+    if (roleLoaded) return;
+    const fetchRoleRecs = async () => {
+      setRoleLoading(true);
+      try {
+        let roleSkillIds: string[] = [];
+        let detectedRole = '';
+
+        // 1. Try fetching user roadmap
+        try {
+          const pathData = await api.getCurrentPath();
+          if (pathData?.roadmap?.length) {
+            roleSkillIds = pathData.roadmap
+              .filter((item: any) => item.skillIds?.length > 0)
+              .flatMap((item: any) => item.skillIds)
+              .filter((id: string, idx: number, arr: string[]) => arr.indexOf(id) === idx)
+              .slice(0, 8);
+          }
+        } catch {
+          // Continue to next fallback
+        }
+
+        // 2. Try fetching active target role from profile / skill graph
+        if (roleSkillIds.length === 0) {
+          try {
+            const profile = await api.getProfile().catch(() => null);
+            detectedRole = profile?.goals?.[profile.goals.length - 1]?.targetRole || 'full-stack-developer';
+            const graph = await api.getSkillGraph(detectedRole).catch(() => null);
+            if (graph?.nodes?.length) {
+              roleSkillIds = graph.nodes
+                .filter(n => n.isRequired)
+                .map(n => n.id)
+                .slice(0, 8);
+              if (graph.role) detectedRole = graph.role;
+            }
+          } catch {
+            // Continue
+          }
+        }
+
+        // 3. Fallback core skills if still empty
+        if (roleSkillIds.length === 0) {
+          roleSkillIds = ['python', 'javascript', 'react', 'sql', 'docker', 'machine-learning'];
+          detectedRole = 'Full Stack Developer';
+        }
+
+        setRoleTargetRole(detectedRole || 'My Target Role');
+
+        // 4. Try fetching AI recommendations with fallback to curated courses
+        try {
+          const result = await api.getBulkRecommendations(roleSkillIds);
+          if (result?.targetRole) setRoleTargetRole(result.targetRole);
+
+          const mappedBundles: SkillBundle[] = (result.results || []).map((r: any) => {
+            const recs = (r.recommendations && r.recommendations.length > 0)
+              ? r.recommendations
+              : getCuratedCoursesForSkill(r.skillId, r.skillName);
+            return {
+              skillId: r.skillId,
+              skillName: r.skillName || r.skillId.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+              recommendations: recs,
+            };
+          });
+
+          if (mappedBundles.length > 0) {
+            setRoleBundles(mappedBundles);
+          } else {
+            // Curated fallback
+            setRoleBundles(
+              roleSkillIds.map(sId => ({
+                skillId: sId,
+                skillName: sId.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+                recommendations: getCuratedCoursesForSkill(sId),
+              }))
+            );
+          }
+        } catch {
+          // Instant curated fallback
+          setRoleBundles(
+            roleSkillIds.map(sId => ({
+              skillId: sId,
+              skillName: sId.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+              recommendations: getCuratedCoursesForSkill(sId),
+            }))
+          );
+        }
+      } catch (err) {
+        console.error('Failed to load role recommendations:', err);
+        // Fallback default bundles so courses never fail to display
+        setRoleBundles([
+          { skillId: 'python', skillName: 'Python Programming', recommendations: getCuratedCoursesForSkill('python') },
+          { skillId: 'javascript', skillName: 'JavaScript & Web', recommendations: getCuratedCoursesForSkill('javascript') },
+          { skillId: 'sql', skillName: 'SQL & Databases', recommendations: getCuratedCoursesForSkill('sql') },
+          { skillId: 'docker', skillName: 'Docker & Containers', recommendations: getCuratedCoursesForSkill('docker') },
+        ]);
+      } finally {
+        setRoleLoading(false);
+        setRoleLoaded(true);
+      }
+    };
+    fetchRoleRecs();
+  }, [roleLoaded]);
 
   return (
     <div className="page-shell space-y-6 page-enter">
@@ -157,8 +363,18 @@ export const CoursesPage: React.FC = () => {
         {/* Tab switch */}
         <div className="flex items-center gap-2 self-start sm:self-end flex-wrap">
           <button
-            onClick={() => setActiveTab('catalog')}
+            onClick={() => setActiveTab('my_role')}
             className={`px-4 py-2 rounded-xl text-[12px] font-mono border transition-all cursor-pointer font-bold flex items-center gap-1.5 ${
+              activeTab === 'my_role'
+                ? 'bg-[var(--primary-500)] text-slate-950 border-transparent shadow-[0_4px_14px_-4px_rgba(245,158,11,0.5)]'
+                : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-muted)]'
+            }`}
+          >
+            <Target size={13} /> For My Role
+          </button>
+          <button
+            onClick={() => setActiveTab('catalog')}
+            className={`px-4 py-2 rounded-xl text-[12px] font-mono border transition-all cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'catalog'
                 ? 'bg-[var(--primary-500)] text-slate-950 border-transparent shadow-[0_4px_14px_-4px_rgba(245,158,11,0.5)]'
                 : 'bg-[var(--bg-surface)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-muted)]'
@@ -178,6 +394,129 @@ export const CoursesPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* ── FOR MY ROLE TAB ─────────────────────────────────────── */}
+      {activeTab === 'my_role' && (
+        <div className="space-y-6 animate-fade-up">
+          <div className="p-5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="badge badge-amber text-[10px] font-mono">
+                <Target size={10} /> PERSONALIZED FOR YOUR ROLE
+              </span>
+              {roleTargetRole && (
+                <span className="text-[11px] font-mono text-[var(--primary-300)] font-bold">
+                  {roleTargetRole.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                </span>
+              )}
+            </div>
+            <h2 className="text-lg font-bold text-[var(--text-primary)] font-display">
+              AI-Curated Courses for Your Career Path
+            </h2>
+            <p className="text-[12px] text-[var(--text-secondary)]">
+              These courses are recommended based on your target role's required skills — powered by Groq AI across Coursera, edX, YouTube, Kaggle, fast.ai, and more.
+            </p>
+          </div>
+
+          {roleLoading ? (
+            <div className="py-16 text-center space-y-3 card animate-fade-in">
+              <Loader2 size={32} className="text-[var(--primary-500)] animate-spin mx-auto" />
+              <p className="text-[13px] text-[var(--text-secondary)]">Loading personalized course recommendations for your role…</p>
+            </div>
+          ) : roleBundles.length === 0 ? (
+            <div className="py-16 text-center card space-y-2">
+              <Target size={28} className="mx-auto text-[var(--text-muted)]" />
+              <p className="text-[13px] text-[var(--text-secondary)]">No role-specific recommendations yet. Complete onboarding to get personalized courses.</p>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {roleBundles.map(b => (
+                <div key={b.skillId} className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-base font-bold text-[var(--text-primary)] font-display">
+                      {b.skillName}
+                    </h3>
+                    <div className="flex-1 h-px bg-[var(--border-dim)]" />
+                    <span className="text-[11px] font-mono text-[var(--text-muted)]">
+                      {b.recommendations.length} courses
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {b.recommendations.map((rec, rIdx) => {
+                      const titleSlug = (rec.title || `rec-${rIdx}`).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                      const providerSlug = (rec.provider || 'prov').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                      const recKey = `course-role-${b.skillId}-${titleSlug}-${providerSlug}-${rIdx}`;
+                      const isRecCompleted = completedCourses.has(recKey);
+
+                      return (
+                        <article
+                          key={rIdx}
+                          className={`card p-5 flex flex-col justify-between gap-4 transition-all ${
+                            isRecCompleted
+                              ? 'bg-[rgba(16,185,129,0.04)] border-[rgba(16,185,129,0.35)]'
+                              : 'hover:border-[var(--border-muted)] hover:scale-[1.01]'
+                          }`}
+                        >
+                          <div className="space-y-2.5">
+                            <div className="flex items-center justify-between">
+                              <span className="badge text-[9px] bg-[var(--bg-void)] text-[var(--text-muted)] border-[var(--border-dim)]">
+                                {rec.platform}
+                              </span>
+                              {isRecCompleted ? (
+                                <span className="badge badge-emerald text-[9px] font-bold">COMPLETED ✓</span>
+                              ) : rec.isFree ? (
+                                <span className="badge badge-emerald text-[9px]">FREE</span>
+                              ) : (
+                                <span className="badge badge-amber text-[9px]">PAID</span>
+                              )}
+                            </div>
+                            <h4 className="text-[14px] font-bold text-[var(--text-primary)] font-display">
+                              {rec.title}
+                            </h4>
+                            <p className="text-[11px] font-mono text-[var(--text-muted)]">{rec.provider}</p>
+                            <p className="text-[12px] text-[var(--text-secondary)] line-clamp-3">
+                              {rec.description}
+                            </p>
+                          </div>
+
+                          <div className="pt-3 border-t border-[var(--border-dim)] flex items-center justify-between gap-2 flex-wrap">
+                            <span className="text-[10px] font-mono text-[var(--text-muted)]">
+                              ~{rec.estimatedHours}h total
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={(e) => toggleCourseComplete(recKey, b.skillId, rec.title, e)}
+                                className={`btn btn-xs font-mono text-[10px] py-1 px-2.5 flex items-center gap-1 cursor-pointer ${
+                                  isRecCompleted
+                                    ? 'bg-[rgba(16,185,129,0.2)] text-[var(--accent-300)] border border-[rgba(16,185,129,0.4)]'
+                                    : 'btn-ghost text-[var(--text-muted)] border border-[var(--border-dim)] hover:text-[var(--text-primary)]'
+                                }`}
+                                title={isRecCompleted ? 'Completed (click to unmark)' : 'Mark course as completed'}
+                              >
+                                <CheckCircle2 size={11} className={isRecCompleted ? 'text-[var(--accent-400)]' : 'text-[var(--text-muted)]'} />
+                                <span>{isRecCompleted ? 'Completed ✓' : 'Mark Complete'}</span>
+                              </button>
+                              <a
+                                href={rec.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-primary btn-xs font-mono text-[10px] py-1 px-3 flex items-center gap-1"
+                              >
+                                <span>Enroll</span>
+                                <ExternalLink size={10} />
+                              </a>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── CATALOG TAB ────────────────────────────────────────────── */}
       {activeTab === 'catalog' && (
@@ -256,8 +595,10 @@ export const CoursesPage: React.FC = () => {
           {/* Course Topic Cards */}
           <div className="space-y-6">
             {filteredCourses.map((topic, idx) => {
-              const freeKey = `${topic.skillId}-free`;
-              const paidKey = `${topic.skillId}-paid`;
+              const freeTitleSlug = (topic.freeCourse.title || 'free').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+              const paidTitleSlug = (topic.paidCourse.title || 'paid').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+              const freeKey = `course-catalog-free-${topic.skillId}-${freeTitleSlug}`;
+              const paidKey = `course-catalog-paid-${topic.skillId}-${paidTitleSlug}`;
               const isFreeCompleted = completedCourses.has(freeKey);
               const isPaidCompleted = completedCourses.has(paidKey);
 
@@ -501,47 +842,74 @@ export const CoursesPage: React.FC = () => {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {b.recommendations.map((rec, rIdx) => (
-                      <article
-                        key={rIdx}
-                        className="card p-5 flex flex-col justify-between gap-4 hover:border-[var(--border-muted)] hover:scale-[1.01] transition-all"
-                      >
-                        <div className="space-y-2.5">
-                          <div className="flex items-center justify-between">
-                            <span className="badge text-[9px] bg-[var(--bg-void)] text-[var(--text-muted)] border-[var(--border-dim)]">
-                              {rec.platform}
-                            </span>
-                            {rec.isFree ? (
-                              <span className="badge badge-emerald text-[9px]">FREE</span>
-                            ) : (
-                              <span className="badge badge-amber text-[9px]">PAID</span>
-                            )}
-                          </div>
-                          <h4 className="text-[14px] font-bold text-[var(--text-primary)] font-display">
-                            {rec.title}
-                          </h4>
-                          <p className="text-[11px] font-mono text-[var(--text-muted)]">{rec.provider}</p>
-                          <p className="text-[12px] text-[var(--text-secondary)] line-clamp-3">
-                            {rec.description}
-                          </p>
-                        </div>
+                    {b.recommendations.map((rec, rIdx) => {
+                      const titleSlug = (rec.title || `search-${rIdx}`).toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                      const providerSlug = (rec.provider || 'prov').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                      const searchRecKey = `course-search-${b.skillId}-${titleSlug}-${providerSlug}-${rIdx}`;
+                      const isSearchRecCompleted = completedCourses.has(searchRecKey);
 
-                        <div className="pt-3 border-t border-[var(--border-dim)] flex items-center justify-between">
-                          <span className="text-[10px] font-mono text-[var(--text-muted)]">
-                            ~{rec.estimatedHours}h total
-                          </span>
-                          <a
-                            href={rec.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn btn-primary btn-xs font-mono text-[10px] py-1 px-3 flex items-center gap-1"
-                          >
-                            <span>Enroll</span>
-                            <ExternalLink size={10} />
-                          </a>
-                        </div>
-                      </article>
-                    ))}
+                      return (
+                        <article
+                          key={rIdx}
+                          className={`card p-5 flex flex-col justify-between gap-4 transition-all ${
+                            isSearchRecCompleted
+                              ? 'bg-[rgba(16,185,129,0.04)] border-[rgba(16,185,129,0.35)]'
+                              : 'hover:border-[var(--border-muted)] hover:scale-[1.01]'
+                          }`}
+                        >
+                          <div className="space-y-2.5">
+                            <div className="flex items-center justify-between">
+                              <span className="badge text-[9px] bg-[var(--bg-void)] text-[var(--text-muted)] border-[var(--border-dim)]">
+                                {rec.platform}
+                              </span>
+                              {isSearchRecCompleted ? (
+                                <span className="badge badge-emerald text-[9px] font-bold">COMPLETED ✓</span>
+                              ) : rec.isFree ? (
+                                <span className="badge badge-emerald text-[9px]">FREE</span>
+                              ) : (
+                                <span className="badge badge-amber text-[9px]">PAID</span>
+                              )}
+                            </div>
+                            <h4 className="text-[14px] font-bold text-[var(--text-primary)] font-display">
+                              {rec.title}
+                            </h4>
+                            <p className="text-[11px] font-mono text-[var(--text-muted)]">{rec.provider}</p>
+                            <p className="text-[12px] text-[var(--text-secondary)] line-clamp-3">
+                              {rec.description}
+                            </p>
+                          </div>
+
+                          <div className="pt-3 border-t border-[var(--border-dim)] flex items-center justify-between gap-2 flex-wrap">
+                            <span className="text-[10px] font-mono text-[var(--text-muted)]">
+                              ~{rec.estimatedHours}h total
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={(e) => toggleCourseComplete(searchRecKey, b.skillId, rec.title, e)}
+                                className={`btn btn-xs font-mono text-[10px] py-1 px-2.5 flex items-center gap-1 cursor-pointer ${
+                                  isSearchRecCompleted
+                                    ? 'bg-[rgba(16,185,129,0.2)] text-[var(--accent-300)] border border-[rgba(16,185,129,0.4)]'
+                                    : 'btn-ghost text-[var(--text-muted)] border border-[var(--border-dim)] hover:text-[var(--text-primary)]'
+                                }`}
+                                title={isSearchRecCompleted ? 'Completed (click to unmark)' : 'Mark course as completed'}
+                              >
+                                <CheckCircle2 size={11} className={isSearchRecCompleted ? 'text-[var(--accent-400)]' : 'text-[var(--text-muted)]'} />
+                                <span>{isSearchRecCompleted ? 'Completed ✓' : 'Mark Complete'}</span>
+                              </button>
+                              <a
+                                href={rec.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-primary btn-xs font-mono text-[10px] py-1 px-3 flex items-center gap-1"
+                              >
+                                <span>Enroll</span>
+                                <ExternalLink size={10} />
+                              </a>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
                   </div>
                 </div>
               ))}

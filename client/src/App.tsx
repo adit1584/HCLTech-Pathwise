@@ -14,8 +14,9 @@ import { RoadmapPage } from './pages/RoadmapPage';
 import { SkillGraphPage } from './pages/SkillGraphPage';
 import { PracticePage } from './pages/PracticePage';
 import { CoursesPage } from './pages/CoursesPage';
-import { ProofPassportPage } from './pages/ProofPassportPage';
-import { WhatIfSimulatorPage } from './pages/WhatIfSimulatorPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { SharePage } from './pages/SharePage';
+import { SimulatorPage } from './pages/SimulatorPage';
 
 const queryClient = new QueryClient();
 
@@ -65,11 +66,7 @@ export const App: React.FC = () => {
                 />
                 <Route
                   path="/diagnostic"
-                  element={
-                    <ProtectedRoute>
-                      <DiagnosticPage />
-                    </ProtectedRoute>
-                  }
+                  element={<Navigate to="/dashboard" replace />}
                 />
                 <Route
                   path="/dashboard"
@@ -112,10 +109,18 @@ export const App: React.FC = () => {
                   }
                 />
                 <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute>
+                      <ProfilePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/passport"
                   element={
                     <ProtectedRoute>
-                      <ProofPassportPage />
+                      <ProfilePage />
                     </ProtectedRoute>
                   }
                 />
@@ -123,15 +128,35 @@ export const App: React.FC = () => {
                   path="/proof"
                   element={
                     <ProtectedRoute>
-                      <ProofPassportPage />
+                      <ProfilePage />
                     </ProtectedRoute>
                   }
+                />
+                <Route
+                  path="/share"
+                  element={<SharePage />}
                 />
                 <Route
                   path="/what-if"
                   element={
                     <ProtectedRoute>
-                      <WhatIfSimulatorPage />
+                      <SimulatorPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/simulator"
+                  element={
+                    <ProtectedRoute>
+                      <SimulatorPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/career-simulator"
+                  element={
+                    <ProtectedRoute>
+                      <SimulatorPage />
                     </ProtectedRoute>
                   }
                 />
