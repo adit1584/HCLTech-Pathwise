@@ -1,0 +1,72 @@
+{
+  "name": "Alex",
+  "email": "alex@demo.pathwise.dev",
+  "password": "pathwise123",
+  "experienceLevel": "beginner_intermediate",
+  "goals": [
+    {
+      "targetRole": "data-scientist",
+      "objective": "career_transition",
+      "timeframeWeeks": 24,
+      "weeklyHours": 8,
+      "currentLevel": "beginner_intermediate",
+      "learningPreference": ["project_based"],
+      "constraints": [],
+      "targetSkills": []
+    }
+  ],
+  "interests": ["data science", "machine learning", "analytics"],
+  "weeklyHours": 8,
+  "preferredLearningModes": ["project_based"],
+  "skillStates": [
+    {
+      "skillId": "python",
+      "proficiency": 72,
+      "confidence": 0.65,
+      "evidence": [
+        { "type": "SELF_REPORT", "score": 70, "timestamp": "2026-08-01T00:00:00Z" },
+        { "type": "PRACTICE", "score": 74, "source": "python-practice-1", "timestamp": "2026-08-10T00:00:00Z" }
+      ]
+    },
+    {
+      "skillId": "excel",
+      "proficiency": 78,
+      "confidence": 0.55,
+      "evidence": [
+        { "type": "SELF_REPORT", "score": 78, "timestamp": "2026-08-01T00:00:00Z" }
+      ]
+    },
+    {
+      "skillId": "sql",
+      "proficiency": 52,
+      "confidence": 0.46,
+      "evidence": [
+        { "type": "SELF_REPORT", "score": 55, "timestamp": "2026-08-01T00:00:00Z" }
+      ]
+    },
+    {
+      "skillId": "statistics",
+      "proficiency": 41,
+      "confidence": 0.38,
+      "evidence": [
+        { "type": "SELF_REPORT", "score": 40, "timestamp": "2026-08-01T00:00:00Z" }
+      ]
+    },
+    {
+      "skillId": "machine-learning",
+      "proficiency": 21,
+      "confidence": 0.25,
+      "evidence": [
+        { "type": "SELF_REPORT", "score": 20, "timestamp": "2026-08-01T00:00:00Z" }
+      ]
+    },
+    {
+      "skillId": "git",
+      "proficiency": 45,
+      "confidence": 0.40,
+      "evidence": [
+        { "type": "SELF_REPORT", "score": 45, "timestamp": "2026-08-01T00:00:00Z" }
+      ]
+    }
+  ]
+}

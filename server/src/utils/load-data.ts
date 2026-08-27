@@ -1,37 +1,50 @@
-import { readFileSync } from 'node:fs';
-import { resolve, join } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { TargetRole, Skill, Resource } from '../models/types.js';
 
-function getDataDir(): string {
-  return resolve(process.cwd(), '../data');
+function findDataFile(filename: string): string | null {
+  const currentDir = typeof __dirname !== 'undefined' ? __dirname : fileURLToPath(new URL('.', import.meta.url));
+  const candidatePaths = [
+    resolve(process.cwd(), '../data', filename),
+    resolve(process.cwd(), 'data', filename),
+    resolve(process.cwd(), 'server/data', filename),
+    resolve(currentDir, '../../data', filename),
+    resolve(currentDir, '../../../data', filename),
+    resolve(currentDir, '../data', filename),
+  ];
+
+  for (const p of candidatePaths) {
+    if (existsSync(p)) {
+      return p;
+    }
+  }
+  return null;
 }
 
 export function loadRolesData(): TargetRole[] {
   try {
-    const filePath = join(getDataDir(), 'roles.json');
+    const filePath = findDataFile('roles.json');
+    if (!filePath) {
+      console.warn('roles.json not found in any candidate path');
+      return [];
+    }
     const data = readFileSync(filePath, 'utf-8');
     return JSON.parse(data);
   } catch (err) {
-    try {
-      const localPath = resolve(process.cwd(), 'data/roles.json');
-      return JSON.parse(readFileSync(localPath, 'utf-8'));
-    } catch {
-      console.warn('Failed to load roles.json data:', err);
-      return [];
-    }
+    console.warn('Failed to load roles.json data:', err);
+    return [];
   }
 }
 
 export function loadSkillsData(): Skill[] {
   try {
-    let raw: any[] = [];
-    try {
-      const filePath = join(getDataDir(), 'skills.json');
-      raw = JSON.parse(readFileSync(filePath, 'utf-8'));
-    } catch {
-      const localPath = resolve(process.cwd(), 'data/skills.json');
-      raw = JSON.parse(readFileSync(localPath, 'utf-8'));
+    const filePath = findDataFile('skills.json');
+    if (!filePath) {
+      console.warn('skills.json not found in any candidate path');
+      return [];
     }
+    const raw: any[] = JSON.parse(readFileSync(filePath, 'utf-8'));
 
     return raw.map((s: any) => ({
       id: s.skillId || s.id,
@@ -44,21 +57,20 @@ export function loadSkillsData(): Skill[] {
       difficulty: s.difficulty || 2,
       estimatedHours: s.estimatedHours || 20,
     }));
-  } catch {
+  } catch (err) {
+    console.warn('Failed to load skills.json data:', err);
     return [];
   }
 }
 
 export function loadResourcesData(): Resource[] {
   try {
-    let raw: any[] = [];
-    try {
-      const filePath = join(getDataDir(), 'resources.json');
-      raw = JSON.parse(readFileSync(filePath, 'utf-8'));
-    } catch {
-      const localPath = resolve(process.cwd(), 'data/resources.json');
-      raw = JSON.parse(readFileSync(localPath, 'utf-8'));
+    const filePath = findDataFile('resources.json');
+    if (!filePath) {
+      console.warn('resources.json not found in any candidate path');
+      return [];
     }
+    const raw: any[] = JSON.parse(readFileSync(filePath, 'utf-8'));
 
     return raw.map((r: any) => ({
       id: r.resourceId || r.id,
@@ -74,7 +86,8 @@ export function loadResourcesData(): Resource[] {
       source: r.source || 'pathwise',
       url: r.url || `https://www.google.com/search?q=${encodeURIComponent(r.title + ' tutorial course practice')}`,
     }));
-  } catch {
+  } catch (err) {
+    console.warn('Failed to load resources.json data:', err);
     return [];
   }
 }

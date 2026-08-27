@@ -1,0 +1,652 @@
+[
+  {
+    "skillId": "python",
+    "name": "Python Programming",
+    "category": "Programming",
+    "description": "Core Python programming including data types, control flow, functions, OOP, file handling, and standard library usage.",
+    "prerequisites": [],
+    "relatedSkills": ["numpy", "pandas", "git"],
+    "roleImportance": [
+      { "roleId": "data-scientist", "importance": 0.95 },
+      { "roleId": "ml-engineer", "importance": 0.98 },
+      { "roleId": "data-analyst", "importance": 0.75 },
+      { "roleId": "ai-engineer", "importance": 0.98 }
+    ],
+    "difficulty": 2,
+    "estimatedHours": 40
+  },
+  {
+    "skillId": "numpy",
+    "name": "NumPy",
+    "category": "Data Science Libraries",
+    "description": "Numerical computing with arrays, linear algebra, random sampling, and vectorized operations.",
+    "prerequisites": ["python"],
+    "relatedSkills": ["pandas", "statistics"],
+    "roleImportance": [
+      { "roleId": "data-scientist", "importance": 0.75 },
+      { "roleId": "ml-engineer", "importance": 0.80 },
+      { "roleId": "ai-engineer", "importance": 0.78 }
+    ],
+    "difficulty": 2,
+    "estimatedHours": 15
+  },
+  {
+    "skillId": "pandas",
+    "name": "Pandas",
+    "category": "Data Science Libraries",
+    "description": "Data manipulation with DataFrames — loading, cleaning, transforming, grouping, merging, and analyzing tabular data.",
+    "prerequisites": ["python", "numpy"],
+    "relatedSkills": ["data-cleaning", "eda"],
+    "roleImportance": [
+      { "roleId": "data-scientist", "importance": 0.90 },
+      { "roleId": "ml-engineer", "importance": 0.75 },
+      { "roleId": "data-analyst", "importance": 0.80 }
+    ],
+    "difficulty": 2,
+    "estimatedHours": 25
+  },
+  {
+    "skillId": "sql",
+    "name": "SQL",
+    "category": "Data",
+    "description": "Querying relational databases — SELECT, JOIN, GROUP BY, subqueries, window functions, and database design.",
+    "prerequisites": [],
+    "relatedSkills": ["data-cleaning", "eda", "nosql"],
+    "roleImportance": [
+      { "roleId": "data-scientist", "importance": 0.85 },
+      { "roleId": "data-analyst", "importance": 0.95 },
+      { "roleId": "full-stack-developer", "importance": 0.82 },
+      { "roleId": "ml-engineer", "importance": 0.65 }
+    ],
+    "difficulty": 2,
+    "estimatedHours": 30
+  },
+  {
+    "skillId": "statistics",
+    "name": "Statistics",
+    "category": "Mathematics",
+    "description": "Descriptive and inferential statistics — distributions, hypothesis testing, confidence intervals, correlation, and regression analysis.",
+    "prerequisites": [],
+    "relatedSkills": ["probability", "regression", "model-evaluation"],
+    "roleImportance": [
+      { "roleId": "data-scientist", "importance": 0.92 },
+      { "roleId": "ml-engineer", "importance": 0.82 },
+      { "roleId": "data-analyst", "importance": 0.85 },
+      { "roleId": "ai-engineer", "importance": 0.72 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 35
+  },
+  {
+    "skillId": "probability",
+    "name": "Probability",
+    "category": "Mathematics",
+    "description": "Probability theory — conditional probability, Bayes' theorem, random variables, distributions, and expected value.",
+    "prerequisites": ["statistics"],
+    "relatedSkills": ["machine-learning", "classification"],
+    "roleImportance": [
+      { "roleId": "data-scientist", "importance": 0.80 },
+      { "roleId": "ml-engineer", "importance": 0.75 },
+      { "roleId": "ai-engineer", "importance": 0.72 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 20
+  },
+  {
+    "skillId": "data-cleaning",
+    "name": "Data Cleaning",
+    "category": "Data Engineering",
+    "description": "Handling missing values, outliers, duplicates, type conversions, and data quality assurance.",
+    "prerequisites": ["pandas"],
+    "relatedSkills": ["eda", "feature-engineering"],
+    "roleImportance": [
+      { "roleId": "data-scientist", "importance": 0.82 },
+      { "roleId": "data-analyst", "importance": 0.88 }
+    ],
+    "difficulty": 2,
+    "estimatedHours": 15
+  },
+  {
+    "skillId": "eda",
+    "name": "Exploratory Data Analysis",
+    "category": "Data Science",
+    "description": "Systematic exploration of datasets through statistical summaries, distributions, correlations, and pattern identification.",
+    "prerequisites": ["pandas", "statistics", "data-visualization"],
+    "relatedSkills": ["data-cleaning", "feature-engineering"],
+    "roleImportance": [
+      { "roleId": "data-scientist", "importance": 0.88 },
+      { "roleId": "data-analyst", "importance": 0.92 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 20
+  },
+  {
+    "skillId": "data-visualization",
+    "name": "Data Visualization",
+    "category": "Data Science",
+    "description": "Creating insightful charts, plots, and dashboards using matplotlib, seaborn, and plotly.",
+    "prerequisites": ["pandas"],
+    "relatedSkills": ["eda", "data-cleaning"],
+    "roleImportance": [
+      { "roleId": "data-scientist", "importance": 0.78 },
+      { "roleId": "data-analyst", "importance": 0.90 }
+    ],
+    "difficulty": 2,
+    "estimatedHours": 20
+  },
+  {
+    "skillId": "feature-engineering",
+    "name": "Feature Engineering",
+    "category": "Machine Learning",
+    "description": "Creating, selecting, and transforming features to improve model performance — encoding, scaling, feature selection, and domain-driven features.",
+    "prerequisites": ["pandas", "statistics", "data-cleaning"],
+    "relatedSkills": ["machine-learning", "eda"],
+    "roleImportance": [
+      { "roleId": "data-scientist", "importance": 0.85 },
+      { "roleId": "ml-engineer", "importance": 0.90 },
+      { "roleId": "ai-engineer", "importance": 0.72 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 25
+  },
+  {
+    "skillId": "machine-learning",
+    "name": "Machine Learning Fundamentals",
+    "category": "Machine Learning",
+    "description": "Core ML concepts — supervised/unsupervised learning, bias-variance tradeoff, cross-validation, and algorithm selection.",
+    "prerequisites": ["python", "statistics", "probability", "numpy"],
+    "relatedSkills": ["regression", "classification", "model-evaluation", "deep-learning"],
+    "roleImportance": [
+      { "roleId": "data-scientist", "importance": 0.95 },
+      { "roleId": "ml-engineer", "importance": 0.98 },
+      { "roleId": "ai-engineer", "importance": 0.90 }
+    ],
+    "difficulty": 4,
+    "estimatedHours": 45
+  },
+  {
+    "skillId": "regression",
+    "name": "Regression",
+    "category": "Machine Learning",
+    "description": "Linear regression, polynomial regression, regularization (Lasso/Ridge), and regression diagnostics.",
+    "prerequisites": ["machine-learning", "statistics"],
+    "relatedSkills": ["classification", "model-evaluation"],
+    "roleImportance": [
+      { "roleId": "data-scientist", "importance": 0.82 },
+      { "roleId": "ml-engineer", "importance": 0.78 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 15
+  },
+  {
+    "skillId": "classification",
+    "name": "Classification",
+    "category": "Machine Learning",
+    "description": "Logistic regression, decision trees, random forests, SVM, and ensemble methods for categorical prediction.",
+    "prerequisites": ["machine-learning", "probability"],
+    "relatedSkills": ["regression", "model-evaluation"],
+    "roleImportance": [
+      { "roleId": "data-scientist", "importance": 0.82 },
+      { "roleId": "ml-engineer", "importance": 0.85 },
+      { "roleId": "ai-engineer", "importance": 0.78 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 20
+  },
+  {
+    "skillId": "model-evaluation",
+    "name": "Model Evaluation",
+    "category": "Machine Learning",
+    "description": "Metrics (accuracy, precision, recall, F1, AUC-ROC), confusion matrices, cross-validation, and hyperparameter tuning.",
+    "prerequisites": ["machine-learning"],
+    "relatedSkills": ["regression", "classification"],
+    "roleImportance": [
+      { "roleId": "data-scientist", "importance": 0.78 },
+      { "roleId": "ml-engineer", "importance": 0.88 },
+      { "roleId": "ai-engineer", "importance": 0.82 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 15
+  },
+  {
+    "skillId": "deep-learning",
+    "name": "Deep Learning",
+    "category": "Machine Learning",
+    "description": "Neural networks, CNNs, RNNs, transformers, backpropagation, and GPU-accelerated training with PyTorch/TensorFlow.",
+    "prerequisites": ["machine-learning", "numpy", "probability"],
+    "relatedSkills": ["nlp", "model-evaluation"],
+    "roleImportance": [
+      { "roleId": "ml-engineer", "importance": 0.92 },
+      { "roleId": "ai-engineer", "importance": 0.95 }
+    ],
+    "difficulty": 4,
+    "estimatedHours": 50
+  },
+  {
+    "skillId": "nlp",
+    "name": "Natural Language Processing",
+    "category": "AI",
+    "description": "Text processing, tokenization, embeddings, sentiment analysis, named entity recognition, and LLM integration.",
+    "prerequisites": ["deep-learning", "python"],
+    "relatedSkills": ["machine-learning"],
+    "roleImportance": [
+      { "roleId": "ai-engineer", "importance": 0.85 }
+    ],
+    "difficulty": 4,
+    "estimatedHours": 35
+  },
+  {
+    "skillId": "git",
+    "name": "Git & Version Control",
+    "category": "Engineering",
+    "description": "Git fundamentals — commits, branches, merging, pull requests, and collaborative development workflows.",
+    "prerequisites": [],
+    "relatedSkills": ["deployment"],
+    "roleImportance": [
+      { "roleId": "data-scientist", "importance": 0.55 },
+      { "roleId": "ml-engineer", "importance": 0.78 },
+      { "roleId": "full-stack-developer", "importance": 0.82 },
+      { "roleId": "ai-engineer", "importance": 0.70 },
+      { "roleId": "data-analyst", "importance": 0.40 }
+    ],
+    "difficulty": 1,
+    "estimatedHours": 10
+  },
+  {
+    "skillId": "deployment",
+    "name": "Model & App Deployment",
+    "category": "Engineering",
+    "description": "Deploying ML models and web applications — REST APIs, containerization, CI/CD, and cloud platforms.",
+    "prerequisites": ["git", "python"],
+    "relatedSkills": ["docker", "api-design"],
+    "roleImportance": [
+      { "roleId": "data-scientist", "importance": 0.45 },
+      { "roleId": "ml-engineer", "importance": 0.90 },
+      { "roleId": "full-stack-developer", "importance": 0.75 },
+      { "roleId": "ai-engineer", "importance": 0.82 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 25
+  },
+  {
+    "skillId": "ml-project",
+    "name": "Applied ML Project",
+    "category": "Applied",
+    "description": "End-to-end machine learning project — problem framing, data pipeline, modeling, evaluation, and deployment.",
+    "prerequisites": ["machine-learning", "feature-engineering", "model-evaluation", "pandas"],
+    "relatedSkills": ["deployment", "eda"],
+    "roleImportance": [
+      { "roleId": "data-scientist", "importance": 0.88 },
+      { "roleId": "ml-engineer", "importance": 0.92 },
+      { "roleId": "ai-engineer", "importance": 0.90 }
+    ],
+    "difficulty": 4,
+    "estimatedHours": 40
+  },
+  {
+    "skillId": "excel",
+    "name": "Excel & Spreadsheets",
+    "category": "Tools",
+    "description": "Advanced spreadsheet skills — pivot tables, VLOOKUP, conditional formatting, macros, and data analysis with Excel.",
+    "prerequisites": [],
+    "relatedSkills": ["sql", "data-visualization"],
+    "roleImportance": [
+      { "roleId": "data-analyst", "importance": 0.82 }
+    ],
+    "difficulty": 1,
+    "estimatedHours": 15
+  },
+  {
+    "skillId": "html-css",
+    "name": "HTML & CSS",
+    "category": "Web Development",
+    "description": "Structuring web pages with HTML5 and styling with CSS3 — layouts, responsive design, and modern CSS features.",
+    "prerequisites": [],
+    "relatedSkills": ["javascript"],
+    "roleImportance": [
+      { "roleId": "full-stack-developer", "importance": 0.88 }
+    ],
+    "difficulty": 1,
+    "estimatedHours": 25
+  },
+  {
+    "skillId": "javascript",
+    "name": "JavaScript",
+    "category": "Programming",
+    "description": "Core JavaScript — ES6+, async/await, closures, prototypes, DOM manipulation, and modern language features.",
+    "prerequisites": ["html-css"],
+    "relatedSkills": ["typescript", "react", "nodejs"],
+    "roleImportance": [
+      { "roleId": "full-stack-developer", "importance": 0.95 }
+    ],
+    "difficulty": 2,
+    "estimatedHours": 40
+  },
+  {
+    "skillId": "typescript",
+    "name": "TypeScript",
+    "category": "Programming",
+    "description": "Type-safe JavaScript — interfaces, generics, type guards, utility types, and advanced type system features.",
+    "prerequisites": ["javascript"],
+    "relatedSkills": ["react", "nodejs"],
+    "roleImportance": [
+      { "roleId": "full-stack-developer", "importance": 0.80 }
+    ],
+    "difficulty": 2,
+    "estimatedHours": 20
+  },
+  {
+    "skillId": "react",
+    "name": "React",
+    "category": "Web Development",
+    "description": "Building UIs with React — components, hooks, state management, routing, and modern React patterns.",
+    "prerequisites": ["javascript"],
+    "relatedSkills": ["typescript", "html-css"],
+    "roleImportance": [
+      { "roleId": "full-stack-developer", "importance": 0.90 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 35
+  },
+  {
+    "skillId": "nodejs",
+    "name": "Node.js",
+    "category": "Backend",
+    "description": "Server-side JavaScript — Express, middleware, authentication, REST APIs, and database integration.",
+    "prerequisites": ["javascript"],
+    "relatedSkills": ["api-design", "sql", "nosql"],
+    "roleImportance": [
+      { "roleId": "full-stack-developer", "importance": 0.90 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 30
+  },
+  {
+    "skillId": "nosql",
+    "name": "NoSQL Databases",
+    "category": "Data",
+    "description": "Document databases (MongoDB), key-value stores, and when to choose NoSQL vs SQL.",
+    "prerequisites": ["sql"],
+    "relatedSkills": ["nodejs", "api-design"],
+    "roleImportance": [
+      { "roleId": "full-stack-developer", "importance": 0.68 }
+    ],
+    "difficulty": 2,
+    "estimatedHours": 15
+  },
+  {
+    "skillId": "api-design",
+    "name": "API Design",
+    "category": "Engineering",
+    "description": "RESTful API design, authentication, versioning, error handling, and API documentation.",
+    "prerequisites": ["nodejs"],
+    "relatedSkills": ["deployment", "testing"],
+    "roleImportance": [
+      { "roleId": "full-stack-developer", "importance": 0.88 },
+      { "roleId": "ml-engineer", "importance": 0.68 },
+      { "roleId": "ai-engineer", "importance": 0.75 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 20
+  },
+  {
+    "skillId": "docker",
+    "name": "Docker & Containerization",
+    "category": "DevOps",
+    "description": "Container fundamentals — Dockerfiles, images, docker-compose, and container orchestration basics.",
+    "prerequisites": ["git", "deployment"],
+    "relatedSkills": ["deployment"],
+    "roleImportance": [
+      { "roleId": "full-stack-developer", "importance": 0.58 },
+      { "roleId": "ml-engineer", "importance": 0.75 },
+      { "roleId": "ai-engineer", "importance": 0.68 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 20
+  },
+  {
+    "skillId": "testing",
+    "name": "Testing",
+    "category": "Engineering",
+    "description": "Unit testing, integration testing, TDD, test frameworks (Jest, pytest), and testing best practices.",
+    "prerequisites": ["python"],
+    "relatedSkills": ["git", "deployment"],
+    "roleImportance": [
+      { "roleId": "full-stack-developer", "importance": 0.72 }
+    ],
+    "difficulty": 2,
+    "estimatedHours": 15
+  },
+  {
+    "skillId": "linux",
+    "name": "Linux & Bash Scripting",
+    "category": "Systems",
+    "description": "Linux command line, file permissions, process management, shell scripting, and system administration.",
+    "prerequisites": [],
+    "relatedSkills": ["git", "docker", "networking"],
+    "roleImportance": [
+      { "roleId": "devops-engineer", "importance": 0.95 },
+      { "roleId": "cybersecurity-analyst", "importance": 0.92 },
+      { "roleId": "backend-developer", "importance": 0.85 }
+    ],
+    "difficulty": 2,
+    "estimatedHours": 20
+  },
+  {
+    "skillId": "networking",
+    "name": "Computer Networking",
+    "category": "Systems",
+    "description": "TCP/IP model, DNS, HTTP/HTTPS, routing, subnets, firewalls, and network troubleshooting.",
+    "prerequisites": [],
+    "relatedSkills": ["linux", "cybersecurity-fundamentals", "api-design"],
+    "roleImportance": [
+      { "roleId": "cybersecurity-analyst", "importance": 0.95 },
+      { "roleId": "devops-engineer", "importance": 0.88 },
+      { "roleId": "backend-developer", "importance": 0.78 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 25
+  },
+  {
+    "skillId": "cybersecurity-fundamentals",
+    "name": "Cybersecurity Fundamentals",
+    "category": "Security",
+    "description": "Threat modeling, cryptography, vulnerability assessment, OWASP Top 10, authentication, and defensive security.",
+    "prerequisites": ["networking", "linux"],
+    "relatedSkills": ["ethical-hacking", "python"],
+    "roleImportance": [
+      { "roleId": "cybersecurity-analyst", "importance": 0.98 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 35
+  },
+  {
+    "skillId": "ethical-hacking",
+    "name": "Ethical Hacking & Penetration Testing",
+    "category": "Security",
+    "description": "Penetration testing methodologies, reconnaissance, exploitation frameworks (Metasploit, Burp Suite), and privilege escalation.",
+    "prerequisites": ["cybersecurity-fundamentals", "python", "networking"],
+    "relatedSkills": ["linux"],
+    "roleImportance": [
+      { "roleId": "cybersecurity-analyst", "importance": 0.92 }
+    ],
+    "difficulty": 4,
+    "estimatedHours": 40
+  },
+  {
+    "skillId": "solidity",
+    "name": "Solidity Programming",
+    "category": "Blockchain",
+    "description": "Smart contract development with Solidity on Ethereum EVM — state variables, modifiers, events, and security.",
+    "prerequisites": ["javascript"],
+    "relatedSkills": ["smart-contracts", "web3"],
+    "roleImportance": [
+      { "roleId": "blockchain-developer", "importance": 0.98 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 35
+  },
+  {
+    "skillId": "smart-contracts",
+    "name": "Smart Contract Architecture & Security",
+    "category": "Blockchain",
+    "description": "Hardhat/Foundry workflows, ERC20/ERC721 standards, reentrancy guards, and formal verification.",
+    "prerequisites": ["solidity", "git"],
+    "relatedSkills": ["web3", "testing"],
+    "roleImportance": [
+      { "roleId": "blockchain-developer", "importance": 0.95 }
+    ],
+    "difficulty": 4,
+    "estimatedHours": 30
+  },
+  {
+    "skillId": "web3",
+    "name": "Web3 & dApp Integration",
+    "category": "Blockchain",
+    "description": "Building decentralized applications using Ethers.js, Wagmi, IPFS, and wallet connectivity with MetaMask.",
+    "prerequisites": ["javascript", "react", "solidity"],
+    "relatedSkills": ["typescript", "api-design"],
+    "roleImportance": [
+      { "roleId": "blockchain-developer", "importance": 0.90 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 25
+  },
+  {
+    "skillId": "system-design",
+    "name": "System Design & Architecture",
+    "category": "Architecture",
+    "description": "Scalable systems, microservices, load balancing, caching (Redis), message queues (Kafka), and database sharding.",
+    "prerequisites": ["api-design", "sql", "docker"],
+    "relatedSkills": ["deployment", "aws-cloud"],
+    "roleImportance": [
+      { "roleId": "backend-developer", "importance": 0.95 },
+      { "roleId": "devops-engineer", "importance": 0.90 },
+      { "roleId": "full-stack-developer", "importance": 0.88 }
+    ],
+    "difficulty": 4,
+    "estimatedHours": 35
+  },
+  {
+    "skillId": "kubernetes",
+    "name": "Kubernetes & Orchestration",
+    "category": "DevOps",
+    "description": "Deploying, scaling, and managing containerized applications with Pods, Deployments, Services, Ingress, and Helm.",
+    "prerequisites": ["docker", "linux", "networking"],
+    "relatedSkills": ["deployment", "aws-cloud"],
+    "roleImportance": [
+      { "roleId": "devops-engineer", "importance": 0.95 }
+    ],
+    "difficulty": 4,
+    "estimatedHours": 35
+  },
+  {
+    "skillId": "aws-cloud",
+    "name": "AWS Cloud Architecture",
+    "category": "Cloud",
+    "description": "Core AWS services (EC2, S3, RDS, Lambda, ECS, CloudFront, IAM) and Infrastructure as Code with Terraform.",
+    "prerequisites": ["linux", "networking", "docker"],
+    "relatedSkills": ["kubernetes", "deployment"],
+    "roleImportance": [
+      { "roleId": "devops-engineer", "importance": 0.92 },
+      { "roleId": "backend-developer", "importance": 0.85 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 35
+  },
+  {
+    "skillId": "flutter",
+    "name": "Flutter & Dart Mobile Development",
+    "category": "Mobile",
+    "description": "Cross-platform mobile applications for iOS and Android with Flutter widgets, state management (Bloc/Riverpod), and native APIs.",
+    "prerequisites": ["javascript"],
+    "relatedSkills": ["api-design", "git"],
+    "roleImportance": [
+      { "roleId": "mobile-developer", "importance": 0.95 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 40
+  },
+  {
+    "skillId": "react-native",
+    "name": "React Native",
+    "category": "Mobile",
+    "description": "Mobile app development with React Native, Expo, navigation, animations, and native device integrations.",
+    "prerequisites": ["react", "javascript", "typescript"],
+    "relatedSkills": ["api-design", "testing"],
+    "roleImportance": [
+      { "roleId": "mobile-developer", "importance": 0.92 },
+      { "roleId": "frontend-developer", "importance": 0.85 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 35
+  },
+  {
+    "skillId": "graphql",
+    "name": "GraphQL APIs",
+    "category": "Backend",
+    "description": "Schema definition, queries, mutations, resolvers, Apollo Server/Client, and real-time subscriptions.",
+    "prerequisites": ["nodejs", "typescript"],
+    "relatedSkills": ["api-design", "react"],
+    "roleImportance": [
+      { "roleId": "full-stack-developer", "importance": 0.82 },
+      { "roleId": "backend-developer", "importance": 0.85 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 20
+  },
+  {
+    "skillId": "ui-ux-design",
+    "name": "UI/UX Design & Design Systems",
+    "category": "Design",
+    "description": "User research, wireframing, high-fidelity Figma prototyping, typography, accessibility (WCAG), and component design systems.",
+    "prerequisites": ["html-css"],
+    "relatedSkills": ["react"],
+    "roleImportance": [
+      { "roleId": "ui-ux-designer", "importance": 0.98 },
+      { "roleId": "frontend-developer", "importance": 0.82 }
+    ],
+    "difficulty": 2,
+    "estimatedHours": 30
+  },
+  {
+    "skillId": "product-management",
+    "name": "Product Management & Strategy",
+    "category": "Product",
+    "description": "Product discovery, user stories, roadmapping, agile sprints, KPI tracking, A/B testing, and stakeholder alignment.",
+    "prerequisites": ["excel"],
+    "relatedSkills": ["sql", "eda", "data-visualization"],
+    "roleImportance": [
+      { "roleId": "product-manager", "importance": 0.98 }
+    ],
+    "difficulty": 2,
+    "estimatedHours": 30
+  },
+  {
+    "skillId": "game-development",
+    "name": "Game Development Fundamentals",
+    "category": "Game Dev",
+    "description": "Game engine architectures, physics, collision detection, game loops, sound, and asset pipeline in Unity / Godot / Unreal.",
+    "prerequisites": ["python"],
+    "relatedSkills": ["3d-modeling-fundamentals", "git"],
+    "roleImportance": [
+      { "roleId": "game-developer", "importance": 0.95 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 40
+  },
+  {
+    "skillId": "blender-3d",
+    "name": "Blender 3D Modeling & Rendering",
+    "category": "3D & Animation",
+    "description": "Hard-surface and organic 3D modeling, UV unwrapping, PBR texturing, lighting, and Cycles/Eevee rendering.",
+    "prerequisites": [],
+    "relatedSkills": ["3d-modeling-fundamentals", "game-development"],
+    "roleImportance": [
+      { "roleId": "3d-animator", "importance": 0.95 },
+      { "roleId": "game-developer", "importance": 0.85 }
+    ],
+    "difficulty": 3,
+    "estimatedHours": 35
+  }
+]

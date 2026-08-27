@@ -1,6 +1,7 @@
 {
   "name": "pathwise-server",
   "version": "1.0.0",
+  "type": "module",
   "description": "Pathwise — Personalized Learning Intelligence API",
   "main": "dist/app.js",
   "scripts": {

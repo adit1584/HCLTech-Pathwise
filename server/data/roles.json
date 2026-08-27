@@ -1,0 +1,111 @@
+[
+  {
+    "id": "data-scientist",
+    "name": "Data Scientist",
+    "description": "Analyze complex datasets, build statistical models, and derive actionable insights using machine learning and data visualization.",
+    "requiredSkills": [
+      { "skillId": "python", "targetProficiency": 80, "importance": 0.95 },
+      { "skillId": "numpy", "targetProficiency": 70, "importance": 0.75 },
+      { "skillId": "pandas", "targetProficiency": 80, "importance": 0.90 },
+      { "skillId": "sql", "targetProficiency": 75, "importance": 0.85 },
+      { "skillId": "statistics", "targetProficiency": 80, "importance": 0.92 },
+      { "skillId": "probability", "targetProficiency": 70, "importance": 0.80 },
+      { "skillId": "data-cleaning", "targetProficiency": 75, "importance": 0.82 },
+      { "skillId": "eda", "targetProficiency": 80, "importance": 0.88 },
+      { "skillId": "data-visualization", "targetProficiency": 75, "importance": 0.78 },
+      { "skillId": "feature-engineering", "targetProficiency": 75, "importance": 0.85 },
+      { "skillId": "machine-learning", "targetProficiency": 80, "importance": 0.95 },
+      { "skillId": "regression", "targetProficiency": 75, "importance": 0.82 },
+      { "skillId": "classification", "targetProficiency": 75, "importance": 0.82 },
+      { "skillId": "model-evaluation", "targetProficiency": 70, "importance": 0.78 },
+      { "skillId": "git", "targetProficiency": 60, "importance": 0.55 },
+      { "skillId": "deployment", "targetProficiency": 55, "importance": 0.45 },
+      { "skillId": "ml-project", "targetProficiency": 70, "importance": 0.88 }
+    ],
+    "estimatedTotalHours": 480
+  },
+  {
+    "id": "ml-engineer",
+    "name": "Machine Learning Engineer",
+    "description": "Design, build, and deploy production machine learning systems at scale.",
+    "requiredSkills": [
+      { "skillId": "python", "targetProficiency": 85, "importance": 0.98 },
+      { "skillId": "numpy", "targetProficiency": 75, "importance": 0.80 },
+      { "skillId": "pandas", "targetProficiency": 75, "importance": 0.75 },
+      { "skillId": "sql", "targetProficiency": 70, "importance": 0.65 },
+      { "skillId": "statistics", "targetProficiency": 75, "importance": 0.82 },
+      { "skillId": "probability", "targetProficiency": 70, "importance": 0.75 },
+      { "skillId": "feature-engineering", "targetProficiency": 80, "importance": 0.90 },
+      { "skillId": "machine-learning", "targetProficiency": 85, "importance": 0.98 },
+      { "skillId": "deep-learning", "targetProficiency": 80, "importance": 0.92 },
+      { "skillId": "regression", "targetProficiency": 75, "importance": 0.78 },
+      { "skillId": "classification", "targetProficiency": 80, "importance": 0.85 },
+      { "skillId": "model-evaluation", "targetProficiency": 80, "importance": 0.88 },
+      { "skillId": "git", "targetProficiency": 75, "importance": 0.78 },
+      { "skillId": "deployment", "targetProficiency": 80, "importance": 0.90 },
+      { "skillId": "docker", "targetProficiency": 70, "importance": 0.75 },
+      { "skillId": "api-design", "targetProficiency": 65, "importance": 0.68 },
+      { "skillId": "ml-project", "targetProficiency": 80, "importance": 0.92 }
+    ],
+    "estimatedTotalHours": 560
+  },
+  {
+    "id": "full-stack-developer",
+    "name": "Full Stack Developer",
+    "description": "Build end-to-end web applications with modern frontend and backend technologies.",
+    "requiredSkills": [
+      { "skillId": "html-css", "targetProficiency": 80, "importance": 0.88 },
+      { "skillId": "javascript", "targetProficiency": 85, "importance": 0.95 },
+      { "skillId": "typescript", "targetProficiency": 75, "importance": 0.80 },
+      { "skillId": "react", "targetProficiency": 80, "importance": 0.90 },
+      { "skillId": "nodejs", "targetProficiency": 80, "importance": 0.90 },
+      { "skillId": "sql", "targetProficiency": 75, "importance": 0.82 },
+      { "skillId": "nosql", "targetProficiency": 65, "importance": 0.68 },
+      { "skillId": "api-design", "targetProficiency": 80, "importance": 0.88 },
+      { "skillId": "git", "targetProficiency": 75, "importance": 0.82 },
+      { "skillId": "deployment", "targetProficiency": 70, "importance": 0.75 },
+      { "skillId": "docker", "targetProficiency": 60, "importance": 0.58 },
+      { "skillId": "testing", "targetProficiency": 70, "importance": 0.72 }
+    ],
+    "estimatedTotalHours": 400
+  },
+  {
+    "id": "data-analyst",
+    "name": "Data Analyst",
+    "description": "Collect, process, and analyze data to help organizations make informed decisions.",
+    "requiredSkills": [
+      { "skillId": "python", "targetProficiency": 65, "importance": 0.75 },
+      { "skillId": "sql", "targetProficiency": 80, "importance": 0.95 },
+      { "skillId": "excel", "targetProficiency": 75, "importance": 0.82 },
+      { "skillId": "statistics", "targetProficiency": 70, "importance": 0.85 },
+      { "skillId": "pandas", "targetProficiency": 70, "importance": 0.80 },
+      { "skillId": "data-cleaning", "targetProficiency": 75, "importance": 0.88 },
+      { "skillId": "eda", "targetProficiency": 80, "importance": 0.92 },
+      { "skillId": "data-visualization", "targetProficiency": 80, "importance": 0.90 },
+      { "skillId": "git", "targetProficiency": 50, "importance": 0.40 }
+    ],
+    "estimatedTotalHours": 320
+  },
+  {
+    "id": "ai-engineer",
+    "name": "AI Engineer",
+    "description": "Build, fine-tune, and deploy AI systems including LLMs, computer vision, and NLP pipelines.",
+    "requiredSkills": [
+      { "skillId": "python", "targetProficiency": 85, "importance": 0.98 },
+      { "skillId": "numpy", "targetProficiency": 75, "importance": 0.78 },
+      { "skillId": "statistics", "targetProficiency": 70, "importance": 0.72 },
+      { "skillId": "probability", "targetProficiency": 70, "importance": 0.72 },
+      { "skillId": "machine-learning", "targetProficiency": 80, "importance": 0.90 },
+      { "skillId": "deep-learning", "targetProficiency": 85, "importance": 0.95 },
+      { "skillId": "nlp", "targetProficiency": 75, "importance": 0.85 },
+      { "skillId": "feature-engineering", "targetProficiency": 70, "importance": 0.72 },
+      { "skillId": "model-evaluation", "targetProficiency": 75, "importance": 0.82 },
+      { "skillId": "git", "targetProficiency": 70, "importance": 0.70 },
+      { "skillId": "deployment", "targetProficiency": 75, "importance": 0.82 },
+      { "skillId": "docker", "targetProficiency": 65, "importance": 0.68 },
+      { "skillId": "api-design", "targetProficiency": 70, "importance": 0.75 },
+      { "skillId": "ml-project", "targetProficiency": 80, "importance": 0.90 }
+    ],
+    "estimatedTotalHours": 520
+  }
+]
