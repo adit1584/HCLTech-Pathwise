@@ -3,60 +3,75 @@ import { config } from '../config.js';
 
 let transporter: nodemailer.Transporter | null = null;
 
-async function getTransporter(): Promise<nodemailer.Transporter> {
+async function getTransporter(): Promise<nodemailer.Transporter | null> {
   if (transporter) return transporter;
 
   // 1. If custom SMTP or service is provided in config/.env
   if (config.smtp.user && config.smtp.pass) {
-    if (config.smtp.service) {
-      transporter = nodemailer.createTransport({
-        service: config.smtp.service,
-        auth: {
-          user: config.smtp.user,
-          pass: config.smtp.pass,
-        },
-      });
-    } else if (config.smtp.host) {
-      transporter = nodemailer.createTransport({
-        host: config.smtp.host,
-        port: config.smtp.port,
-        secure: config.smtp.port === 465,
-        auth: {
-          user: config.smtp.user,
-          pass: config.smtp.pass,
-        },
-      });
-    }
-  }
-
-  // 2. Fallback to automated test transporter if no credentials supplied
-  if (!transporter) {
     try {
-      const testAccount = await nodemailer.createTestAccount();
-      transporter = nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
-        secure: false,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass,
-        },
-      });
-      console.log(`[EMAIL] ℹ️ Using Ethereal test account: ${testAccount.user}`);
-    } catch {
-      // Fallback in-memory stream transport if offline
-      transporter = nodemailer.createTransport({
-        jsonTransport: true,
-      });
+      if (config.smtp.service || config.smtp.user.endsWith('@gmail.com')) {
+        transporter = nodemailer.createTransport({
+          service: config.smtp.service || 'gmail',
+          auth: {
+            user: config.smtp.user,
+            pass: config.smtp.pass,
+          },
+        });
+      } else if (config.smtp.host) {
+        transporter = nodemailer.createTransport({
+          host: config.smtp.host,
+          port: config.smtp.port,
+          secure: config.smtp.port === 465,
+          auth: {
+            user: config.smtp.user,
+            pass: config.smtp.pass,
+          },
+        });
+      }
+      if (transporter) {
+        console.log(`[EMAIL] 🚀 Transporter initialized for ${config.smtp.user}`);
+        return transporter;
+      }
+    } catch (err) {
+      console.warn('[EMAIL] Failed to initialize configured SMTP:', err);
     }
   }
 
-  return transporter;
+  // 2. Try Ethereal test transport
+  try {
+    const testAccount = await nodemailer.createTestAccount();
+    transporter = nodemailer.createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      secure: false,
+      auth: {
+        user: testAccount.user,
+        pass: testAccount.pass,
+      },
+    });
+    console.log(`[EMAIL] ℹ️ Using Ethereal sandbox: ${testAccount.user}`);
+    return transporter;
+  } catch {
+    return null;
+  }
 }
 
 export async function sendOtpEmail(email: string, otp: string, name = 'Learner'): Promise<boolean> {
+  console.log(`
+╔══════════════════════════════════════════════════════════════╗
+║ [EMAIL DISPATCH]                                             ║
+║ Recipient:  ${email.padEnd(48)}║
+║ OTP Code:   ${otp.padEnd(48)}║
+║ Expiration: 10 minutes                                       ║
+╚══════════════════════════════════════════════════════════════╝
+  `);
+
   try {
     const transport = await getTransporter();
+    if (!transport) {
+      console.warn(`[EMAIL] No active SMTP transporter. OTP logged in console above.`);
+      return false;
+    }
 
     const htmlContent = `
 <!DOCTYPE html>
@@ -140,11 +155,7 @@ export async function sendOtpEmail(email: string, otp: string, name = 'Learner')
       html: htmlContent,
     });
 
-    console.log(`[EMAIL] ✉️  Verification OTP sent to ${email} (MessageId: ${info.messageId || 'ok'})`);
-    if (nodemailer.getTestMessageUrl(info)) {
-      console.log(`[EMAIL] 🔗 Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
-    }
-
+    console.log(`[EMAIL] ✉️  Verification OTP dispatched to ${email} (MessageId: ${info.messageId || 'ok'})`);
     return true;
   } catch (error) {
     console.error(`[EMAIL] ❌ Failed to dispatch email to ${email}:`, error);
