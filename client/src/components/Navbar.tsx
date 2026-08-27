@@ -102,32 +102,32 @@ export const Navbar: React.FC = () => {
           <div className="flex items-center justify-between gap-4">
 
             {/* ── Left Column: Brand & Logo ── */}
-            <div className="flex-1 flex justify-start items-center min-w-0">
+            <div className="flex justify-start items-center min-w-0">
               <Link
                 to={user ? '/dashboard' : '/'}
-                className="flex items-center gap-3 group shrink-0 active:scale-95 transition-transform duration-150"
+                className="flex items-center gap-2 sm:gap-3 group shrink-0 active:scale-95 transition-transform duration-150"
                 aria-label="Pathwise Home"
               >
                 {/* Golden Holographic Compass Token */}
                 <div
-                  className="relative flex h-9 w-9 items-center justify-center rounded-2xl text-slate-950 transition-all duration-300 group-hover:rotate-12 group-hover:scale-110 group-active:scale-90 shadow-md"
+                  className="relative flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl sm:rounded-2xl text-slate-950 transition-all duration-300 group-hover:rotate-12 group-hover:scale-110 group-active:scale-90 shadow-md shrink-0"
                   style={{
                     background: 'linear-gradient(135deg, #fef08a 0%, #f59e0b 50%, #d97706 100%)',
                     boxShadow: '0 4px 18px -2px rgba(245,158,11,0.5), inset 0 1px 1px rgba(255,255,255,0.7)',
                   }}
                 >
-                  <Compass size={19} className="stroke-[2.5] text-slate-950 group-hover:animate-pulse" />
-                  <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                  <Compass size={17} className="stroke-[2.5] text-slate-950 group-hover:animate-pulse" />
+                  <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2 sm:h-2.5 sm:w-2.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-300"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 sm:h-2.5 sm:w-2.5 bg-amber-300"></span>
                   </span>
                 </div>
 
-                <div className="flex flex-col">
-                  <span className="text-[17px] font-black tracking-tight bg-gradient-to-r from-white via-amber-100 to-amber-300 bg-clip-text text-transparent font-display leading-none group-hover:to-amber-400 transition-all">
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[15px] sm:text-[17px] font-black tracking-tight bg-gradient-to-r from-white via-amber-100 to-amber-300 bg-clip-text text-transparent font-display leading-none group-hover:to-amber-400 transition-all truncate">
                     Pathwise
                   </span>
-                  <span className="text-[9px] font-mono font-bold text-amber-400/80 tracking-wider flex items-center gap-1 mt-0.5">
+                  <span className="hidden sm:flex text-[8.5px] sm:text-[9px] font-mono font-bold text-amber-400/80 tracking-wider items-center gap-1 mt-0.5">
                     <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     ADAPTIVE NAVIGATOR
                   </span>
@@ -183,35 +183,35 @@ export const Navbar: React.FC = () => {
             )}
 
             {/* ── Right Column: Action Controls (Ask AI + Profile Dropdown) ── */}
-            <div className="flex-1 flex justify-end items-center gap-2 sm:gap-3">
+            <div className="flex justify-end items-center gap-1.5 sm:gap-2.5 shrink-0">
               {user ? (
                 <>
                   {/* Glowing, Ultra-Slick Ask AI Button */}
                   <button
                     id="nav-ai-assistant"
                     onClick={() => setIsAssistantOpen(true)}
-                    className="relative inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold font-mono text-white bg-gradient-to-r from-purple-600/30 via-indigo-600/25 to-cyan-500/20 border border-purple-500/40 hover:border-purple-400/80 hover:shadow-[0_0_24px_rgba(168,85,247,0.45)] active:scale-95 transition-all duration-200 cursor-pointer group overflow-hidden"
+                    className="relative inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-full text-xs font-semibold font-mono text-white bg-gradient-to-r from-purple-600/30 via-indigo-600/25 to-cyan-500/20 border border-purple-500/40 hover:border-purple-400/80 hover:shadow-[0_0_24px_rgba(168,85,247,0.45)] active:scale-95 transition-all duration-200 cursor-pointer group overflow-hidden shrink-0"
                     aria-label="Ask AI Assistant"
                     title="Ask Pathwise AI (⌘K)"
                   >
                     {/* Ambient Light Sweep */}
                     <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 pointer-events-none" />
                     
-                    <Sparkles size={13} className="text-purple-300 group-hover:text-amber-300 group-hover:rotate-12 transition-all duration-300" />
-                    <span className="bg-gradient-to-r from-purple-200 via-indigo-100 to-cyan-200 bg-clip-text text-transparent font-bold">
+                    <Sparkles size={13} className="text-purple-300 group-hover:text-amber-300 group-hover:rotate-12 transition-all duration-300 shrink-0" />
+                    <span className="hidden sm:inline bg-gradient-to-r from-purple-200 via-indigo-100 to-cyan-200 bg-clip-text text-transparent font-bold">
                       Ask AI
                     </span>
-                    <span className="hidden sm:inline-flex items-center justify-center px-1.5 py-0.5 rounded-md bg-black/40 text-[9.5px] font-mono text-purple-300 border border-purple-500/30">
+                    <span className="hidden md:inline-flex items-center justify-center px-1.5 py-0.5 rounded-md bg-black/40 text-[9.5px] font-mono text-purple-300 border border-purple-500/30">
                       ⌘K
                     </span>
                   </button>
 
                   {/* Profile Avatar Trigger & Dropdown Menu */}
-                  <div className="relative pl-1" ref={profileMenuRef}>
+                  <div className="relative pl-0.5" ref={profileMenuRef}>
                     <button
                       id="nav-user-profile-btn"
                       onClick={() => setIsProfileMenuOpen(prev => !prev)}
-                      className={`flex items-center gap-1.5 p-1 pr-2 rounded-2xl border transition-all cursor-pointer select-none group ${
+                      className={`flex items-center gap-1 p-1 pr-1.5 sm:pr-2 rounded-xl sm:rounded-2xl border transition-all cursor-pointer select-none group shrink-0 ${
                         isProfileMenuOpen
                           ? 'bg-white/[0.08] border-cyan-400/50 shadow-[0_0_16px_rgba(14,165,233,0.3)]'
                           : 'bg-white/[0.03] border-white/[0.08] hover:border-white/[0.2]'
@@ -221,7 +221,7 @@ export const Navbar: React.FC = () => {
                     >
                       {/* Avatar */}
                       <div
-                        className="h-8 w-8 rounded-xl flex items-center justify-center text-xs font-black font-mono text-slate-950 shrink-0 shadow-lg group-hover:scale-105 transition-transform"
+                        className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg sm:rounded-xl flex items-center justify-center text-xs font-black font-mono text-slate-950 shrink-0 shadow-lg group-hover:scale-105 transition-transform"
                         style={{
                           background: 'linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%)',
                           boxShadow: '0 3px 14px rgba(14,165,233,0.4), inset 0 1px 1px rgba(255,255,255,0.4)',
@@ -230,7 +230,7 @@ export const Navbar: React.FC = () => {
                         {user.name?.charAt(0).toUpperCase() || 'U'}
                       </div>
                       <ChevronDown
-                        size={12}
+                        size={11}
                         className={`text-slate-400 group-hover:text-white transition-transform duration-200 ${
                           isProfileMenuOpen ? 'rotate-180 text-cyan-300' : ''
                         }`}

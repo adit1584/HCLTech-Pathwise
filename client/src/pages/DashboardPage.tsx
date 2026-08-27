@@ -233,40 +233,40 @@ export const DashboardPage: React.FC = () => {
     <div className="page-shell space-y-6 page-enter pb-16">
 
       {/* ── Top Header ────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border-dim)] pb-5">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-dim)] pb-5 animate-fade-up">
+        <div className="space-y-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-black tracking-[-0.03em] text-[var(--text-primary)] font-display">
               Welcome back, {user?.name?.split(' ')[0] || 'Learner'}
             </h1>
-            <span className="badge badge-amber text-[10px] font-mono uppercase font-bold">
+            <span className="badge badge-amber text-[10px] font-mono uppercase font-bold shrink-0">
               {targetRoleName}
             </span>
           </div>
-          <p className="text-[13px] text-[var(--text-secondary)]">
+          <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
             {remainingHours === 0
               ? '🎉 All roadmap steps completed! Ready for industry roles.'
               : `Your DAG learning path is calibrated: ${remainingHours} hours (${remainingWeeks} weeks) remaining at ${weeklyStudyHours}h/week velocity. Target: ${targetCompletionDate}.`}
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full md:w-auto">
           <button
             id="dashboard-micro-spark-btn"
             onClick={() => setIsSparkOpen(true)}
-            className="btn btn-secondary btn-sm text-[12px] font-mono flex items-center gap-1.5 border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.06)] text-[var(--primary-300)] hover:bg-[rgba(245,158,11,0.12)]"
+            className="btn btn-secondary btn-sm text-[12px] font-mono flex items-center justify-center gap-1.5 border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.06)] text-[var(--primary-300)] hover:bg-[rgba(245,158,11,0.12)] flex-1 sm:flex-initial"
             title="Launch 90-second Micro-Spark Recall"
           >
             <Flame size={13} className="text-[var(--primary-400)]" />
             <span>90s Recall</span>
           </button>
 
-          <Link to="/simulator" className="btn btn-ghost btn-sm text-[12px] font-mono flex items-center gap-1.5 border border-[var(--border-subtle)] hover:border-[var(--primary-400)]">
+          <Link to="/simulator" className="btn btn-ghost btn-sm text-[12px] font-mono flex items-center justify-center gap-1.5 border border-[var(--border-subtle)] hover:border-[var(--primary-400)] flex-1 sm:flex-initial">
             <Shuffle size={13} className="text-[var(--primary-400)]" />
-            <span>Career Simulator</span>
+            <span>Simulator</span>
           </Link>
 
-          <Link to="/roadmap" id="dashboard-roadmap-link" className="btn btn-primary btn-sm text-[12px] flex items-center gap-1.5 shadow-sm">
+          <Link to="/roadmap" id="dashboard-roadmap-link" className="btn btn-primary btn-sm text-[12px] flex items-center justify-center gap-1.5 shadow-sm w-full sm:w-auto">
             <Map size={13} />
             <span>View Roadmap</span>
           </Link>
@@ -274,26 +274,26 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* ── Career Path Pivot Banner ───────────────────────────────── */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-cyan-500/10 to-transparent border border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-up">
-        <div className="space-y-0.5">
-          <div className="flex items-center gap-2">
+      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-cyan-500/10 to-transparent border border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 animate-fade-up">
+        <div className="space-y-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="badge badge-amber text-[9px] font-mono font-bold flex items-center gap-1">
               <Shuffle size={10} /> CAREER PATH SIMULATOR
             </span>
-            <span className="text-[12px] font-bold text-white">
+            <span className="text-[12px] font-bold text-white truncate">
               Current Target: {targetRoleName}
             </span>
           </div>
-          <p className="text-[11px] text-[var(--text-secondary)]">
+          <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
             Want to pivot? Test switching to any custom career role, simulate dual-track hybrid synergy, swap individual course tracks, or adjust study velocity.
           </p>
         </div>
         <Link
           to="/simulator"
-          className="btn btn-primary text-xs font-mono px-4 py-2 flex items-center gap-1.5 shrink-0 self-start sm:self-auto"
+          className="btn btn-primary text-xs font-mono px-4 py-2.5 flex items-center justify-center gap-1.5 w-full sm:w-auto shrink-0"
         >
           <Shuffle size={12} />
-          <span>Launch Career Simulator ↗</span>
+          <span>Launch Simulator ↗</span>
         </Link>
       </div>
 
