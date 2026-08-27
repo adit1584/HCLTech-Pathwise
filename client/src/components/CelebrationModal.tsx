@@ -65,13 +65,13 @@ export const CelebrationModal: React.FC<CelebrationModalProps> = ({
           
           {/* Holographic Circle Container */}
           <div
-            className="relative flex h-20 w-20 items-center justify-center rounded-3xl text-slate-950 shadow-2xl animate-bounce"
+            className="relative flex h-20 w-20 items-center justify-center rounded-3xl text-slate-950 shadow-2xl transition-transform duration-700 ease-out hover:scale-110 active:scale-95 animate-fade-in"
             style={{
               background: 'linear-gradient(135deg, #fef08a 0%, #f59e0b 50%, #d97706 100%)',
               boxShadow: '0 8px 30px rgba(245,158,11,0.6), inset 0 2px 2px rgba(255,255,255,0.7)',
             }}
           >
-            <Trophy size={42} className="stroke-[2.2] text-slate-950" />
+            <Trophy size={42} className="stroke-[2.2] text-slate-950 animate-pulse" />
           </div>
 
           {/* Mini Orbiting Stars */}

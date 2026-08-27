@@ -190,18 +190,18 @@ export const Navbar: React.FC = () => {
                   <button
                     id="nav-ai-assistant"
                     onClick={() => setIsAssistantOpen(true)}
-                    className="relative inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-full text-xs font-semibold font-mono text-white bg-gradient-to-r from-purple-600/30 via-indigo-600/25 to-cyan-500/20 border border-purple-500/40 hover:border-purple-400/80 hover:shadow-[0_0_24px_rgba(168,85,247,0.45)] active:scale-95 transition-all duration-200 cursor-pointer group overflow-hidden shrink-0"
+                    className="relative inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-full text-xs font-semibold font-mono text-amber-200 bg-gradient-to-r from-amber-500/20 via-amber-500/15 to-cyan-500/15 border border-amber-500/40 hover:border-amber-400/80 hover:shadow-[0_0_24px_rgba(245,158,11,0.4)] active:scale-95 transition-all duration-200 cursor-pointer group overflow-hidden shrink-0"
                     aria-label="Ask AI Assistant"
                     title="Ask Pathwise AI (⌘K)"
                   >
                     {/* Ambient Light Sweep */}
                     <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 pointer-events-none" />
                     
-                    <Sparkles size={13} className="text-purple-300 group-hover:text-amber-300 group-hover:rotate-12 transition-all duration-300 shrink-0" />
-                    <span className="hidden sm:inline bg-gradient-to-r from-purple-200 via-indigo-100 to-cyan-200 bg-clip-text text-transparent font-bold">
+                    <Sparkles size={13} className="text-amber-400 group-hover:rotate-12 transition-all duration-300 shrink-0" />
+                    <span className="hidden sm:inline font-bold text-amber-200 group-hover:text-amber-100">
                       Ask AI
                     </span>
-                    <span className="hidden md:inline-flex items-center justify-center px-1.5 py-0.5 rounded-md bg-black/40 text-[9.5px] font-mono text-purple-300 border border-purple-500/30">
+                    <span className="hidden md:inline-flex items-center justify-center px-1.5 py-0.5 rounded-md bg-black/40 text-[9.5px] font-mono text-amber-300 border border-amber-500/30">
                       ⌘K
                     </span>
                   </button>
@@ -264,16 +264,16 @@ export const Navbar: React.FC = () => {
                               setIsProfileMenuOpen(false);
                               navigate('/profile');
                             }}
-                            className="w-full flex items-center gap-3 p-2.5 rounded-xl text-left text-xs font-medium text-slate-200 hover:bg-cyan-500/15 hover:text-cyan-300 border border-transparent hover:border-cyan-500/30 transition-all cursor-pointer group"
+                            className="w-full flex items-center gap-3 p-2.5 rounded-xl text-left text-xs font-medium text-white hover:bg-cyan-500/20 hover:text-cyan-200 border border-transparent hover:border-cyan-500/40 transition-all cursor-pointer group"
                           >
-                            <div className="p-1.5 rounded-lg bg-cyan-500/15 text-cyan-400 group-hover:bg-cyan-500/25 transition-colors">
+                            <div className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-300 group-hover:bg-cyan-500/30 transition-colors">
                               <User size={15} />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="text-xs font-bold text-white group-hover:text-cyan-300">
+                              <div className="text-xs font-bold text-white group-hover:text-cyan-200">
                                 My Profile
                               </div>
-                              <div className="text-[10px] text-[var(--text-muted)] truncate">
+                              <div className="text-[10px] text-slate-400 truncate">
                                 Roadmap stats, skills & readiness
                               </div>
                             </div>
@@ -285,16 +285,16 @@ export const Navbar: React.FC = () => {
                               setIsProfileMenuOpen(false);
                               navigate('/share');
                             }}
-                            className="w-full flex items-center gap-3 p-2.5 rounded-xl text-left text-xs font-medium text-slate-200 hover:bg-amber-500/15 hover:text-amber-300 border border-transparent hover:border-amber-500/30 transition-all cursor-pointer group"
+                            className="w-full flex items-center gap-3 p-2.5 rounded-xl text-left text-xs font-medium text-white hover:bg-amber-500/20 hover:text-amber-200 border border-transparent hover:border-amber-500/40 transition-all cursor-pointer group"
                           >
-                            <div className="p-1.5 rounded-lg bg-amber-500/15 text-amber-400 group-hover:bg-amber-500/25 transition-colors">
+                            <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-300 group-hover:bg-amber-500/30 transition-colors">
                               <Share2 size={15} />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="text-xs font-bold text-white group-hover:text-amber-300">
+                              <div className="text-xs font-bold text-white group-hover:text-amber-200">
                                 Share Public Portfolio
                               </div>
-                              <div className="text-[10px] text-[var(--text-muted)] truncate">
+                              <div className="text-[10px] text-slate-400 truncate">
                                 Recruiter-ready verified certificate
                               </div>
                             </div>
