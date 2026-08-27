@@ -8,7 +8,8 @@
     "dev:client": "npm run dev --prefix client",
     "seed": "npm run seed --prefix server",
     "test": "npm run test --prefix server",
-    "build": "npm run build --prefix server && npm run build --prefix client"
+    "build": "npm run build --prefix server",
+    "start": "npm start --prefix server"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

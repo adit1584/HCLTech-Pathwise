@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: pathwise-server
+    runtime: node
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: CLIENT_URL
+        value: "*"
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
