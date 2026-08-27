@@ -28,7 +28,6 @@ export const AuthPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
-  const [devOtp, setDevOtp] = useState<string | null>(null);
 
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -54,8 +53,7 @@ export const AuthPage: React.FC = () => {
 
     try {
       const res = await sendOtp(name, email, password);
-      setDevOtp(res.devOtp || null);
-      setSuccessMsg(`Verification code sent to ${res.email}.`);
+      setSuccessMsg(res.message || `Verification code sent to ${res.email}.`);
       setStep('otp');
       setResendTimer(45);
     } catch (err: any) {
@@ -92,8 +90,7 @@ export const AuthPage: React.FC = () => {
 
     try {
       const res = await sendOtp(name, email, password);
-      setDevOtp(res.devOtp || null);
-      setSuccessMsg(`New verification code sent to ${email}.`);
+      setSuccessMsg(res.message || `New verification code sent directly to ${email}.`);
       setResendTimer(45);
     } catch (err: any) {
       setError(err.message || 'Failed to resend code.');
@@ -257,25 +254,11 @@ export const AuthPage: React.FC = () => {
               <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-2">
                 <div className="flex items-center gap-2 text-amber-300 text-xs font-bold font-mono">
                   <KeyRound size={15} />
-                  <span>Verify Your Email Address</span>
+                  <span>Check Your Email Inbox</span>
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  We've sent a 6-digit verification code to <strong className="text-white">{email}</strong>. Please enter the code below to activate your account.
+                  We've sent a 6-digit verification code directly to <strong className="text-white">{email}</strong>. Please check your inbox (or spam/promotions folder) and enter the code below:
                 </p>
-
-                {devOtp && (
-                  <div className="pt-2 flex items-center gap-2">
-                    <span className="text-[10px] font-mono text-amber-400/80">Developer Code:</span>
-                    <button
-                      type="button"
-                      onClick={() => setOtp(devOtp)}
-                      className="px-2 py-0.5 rounded bg-black/50 border border-amber-500/40 text-amber-300 text-xs font-mono font-bold hover:bg-amber-500/20 transition-all cursor-pointer"
-                      title="Click to auto-fill code"
-                    >
-                      {devOtp} (Click to Fill)
-                    </button>
-                  </div>
-                )}
               </div>
 
               <div className="space-y-1.5">

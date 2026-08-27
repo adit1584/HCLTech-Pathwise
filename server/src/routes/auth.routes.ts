@@ -7,6 +7,7 @@ import { OtpVerificationModel } from '../models/OtpVerification.js';
 import { registerSchema, loginSchema } from '../middleware/validation.js';
 import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import { validateRealEmail } from '../utils/emailValidator.js';
+import { sendOtpEmail } from '../services/emailService.js';
 
 const router = Router();
 
@@ -63,13 +64,13 @@ router.post('/send-otp', async (req: Request, res: Response) => {
       { upsert: true, new: true }
     );
 
-    console.log(`[AUTH] ✉️  OTP for ${cleanEmail}: ${otp}`);
+    // 5. Send real email directly to user's inbox
+    await sendOtpEmail(cleanEmail, otp, name.trim());
 
     res.json({
       success: true,
-      message: `A 6-digit verification code has been dispatched to ${cleanEmail}.`,
+      message: `A 6-digit verification code has been dispatched directly to ${cleanEmail}. Please check your inbox or spam folder.`,
       email: cleanEmail,
-      devOtp: otp, // Facilitates seamless testing in local / hackathon environment
     });
   } catch (error) {
     console.error('Send OTP error:', error);

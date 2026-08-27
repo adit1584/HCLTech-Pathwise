@@ -21,8 +21,14 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(8, 'JWT_SECRET must be at least 8 characters'),
   JWT_EXPIRES_IN: z.string().default('7d'),
   GROQ_API_KEY: z.string().default(''),
-  GROQ_MODEL: z.string().default('openai/gpt-oss-120b'),
+  GROQ_MODEL: z.string().default('llama-3.3-70b-versatile'),
   CLIENT_URL: z.string().default('http://localhost:5173'),
+  SMTP_HOST: z.string().optional().default(''),
+  SMTP_PORT: z.string().optional().default('587'),
+  SMTP_USER: z.string().optional().default(''),
+  SMTP_PASS: z.string().optional().default(''),
+  SMTP_FROM: z.string().optional().default('Pathwise Verification <no-reply@pathwise.dev>'),
+  SMTP_SERVICE: z.string().optional().default(''),
 });
 
 function loadConfig() {
@@ -43,6 +49,14 @@ function loadConfig() {
     groqApiKey: result.data.GROQ_API_KEY,
     groqModel: result.data.GROQ_MODEL,
     clientUrl: result.data.CLIENT_URL,
+    smtp: {
+      host: result.data.SMTP_HOST,
+      port: parseInt(result.data.SMTP_PORT || '587', 10),
+      user: result.data.SMTP_USER,
+      pass: result.data.SMTP_PASS,
+      from: result.data.SMTP_FROM,
+      service: result.data.SMTP_SERVICE,
+    },
   };
 }
 

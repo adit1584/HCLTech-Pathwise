@@ -53,7 +53,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 export const api = {
   // Auth
   sendOtp: (data: { name: string; email: string; password: string }) =>
-    request<{ success: boolean; message: string; email: string; devOtp?: string }>('/auth/send-otp', {
+    request<{ success: boolean; message: string; email: string }>('/auth/send-otp', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
