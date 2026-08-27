@@ -305,14 +305,15 @@ export const AssistantModal: React.FC<AssistantModalProps> = ({ isOpen, onClose 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
       style={{ background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(12px)' }}
       role="dialog"
       aria-modal="true"
       aria-label="Pathwise AI Assistant"
+      onClick={onClose}
     >
       <div
-        className="flex flex-col w-full max-w-lg sm:max-w-xl h-[82vh] max-h-[620px] rounded-2xl overflow-hidden animate-fade-up border border-cyan-500/30 shadow-[0_20px_60px_-10px_rgba(14,165,233,0.35)]"
+        className="flex flex-col w-full max-w-lg sm:max-w-xl h-[90vh] sm:h-[82vh] max-h-none sm:max-h-[620px] rounded-t-3xl sm:rounded-2xl overflow-hidden animate-fade-up border-t sm:border border-cyan-500/30 shadow-[0_20px_60px_-10px_rgba(14,165,233,0.35)]"
         style={{
           background: 'linear-gradient(180deg, #090e1c 0%, #050812 100%)',
         }}

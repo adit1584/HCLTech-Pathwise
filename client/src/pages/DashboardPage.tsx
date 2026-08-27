@@ -298,7 +298,7 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* ── KPI Strip ────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 animate-fade-up">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 animate-fade-up">
         {[
           { label: 'Role Readiness',    value: `${avgProficiency}%`, icon: Target,       color: 'var(--primary-400)', sub: `${progressPercent}% syllabus done` },
           { label: 'Remaining ETA',     value: `${remainingWeeks}w`, icon: Clock,        color: 'var(--accent-400)',  sub: `${remainingHours}h to target (${targetCompletionDate})` },
@@ -307,16 +307,16 @@ export const DashboardPage: React.FC = () => {
         ].map(({ label, value, icon: Icon, color, sub }, i) => (
           <div
             key={label}
-            className="card p-4 flex items-center gap-3.5"
+            className="card p-3 sm:p-4 flex items-center gap-2.5 sm:gap-3.5"
             style={{ animationDelay: `${i * 50}ms` }}
           >
-            <div className="p-2.5 rounded-xl shrink-0" style={{ background: `${color}15`, color }}>
-              <Icon size={18} strokeWidth={2} />
+            <div className="p-2 sm:p-2.5 rounded-xl shrink-0" style={{ background: `${color}15`, color }}>
+              <Icon size={16} strokeWidth={2} />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="stat-number text-[1.3rem] font-mono leading-none" style={{ color }}>{value}</div>
-              <div className="text-[11px] text-[var(--text-muted)] font-mono font-medium truncate mt-1">{label}</div>
-              <div className="text-[9px] font-mono text-[var(--text-muted)] truncate opacity-80 mt-0.5">{sub}</div>
+              <div className="stat-number text-[1.15rem] sm:text-[1.3rem] font-mono leading-none" style={{ color }}>{value}</div>
+              <div className="text-[10.5px] sm:text-[11px] text-[var(--text-muted)] font-mono font-medium truncate mt-1">{label}</div>
+              <div className="text-[8.5px] sm:text-[9px] font-mono text-[var(--text-muted)] truncate opacity-80 mt-0.5">{sub}</div>
             </div>
           </div>
         ))}

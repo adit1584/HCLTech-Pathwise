@@ -357,15 +357,30 @@ export const Navbar: React.FC = () => {
 
         {/* ── Mobile Navigation Drawer ────────────────────────── */}
         {mobileOpen && user && (
-          <div className="lg:hidden mt-3 border-t border-white/[0.08] bg-[#070912]/95 backdrop-blur-2xl animate-fade-in shadow-2xl">
+          <div className="lg:hidden mt-2 border-t border-white/[0.08] bg-[#070912]/98 backdrop-blur-2xl animate-fade-in shadow-2xl max-h-[calc(100vh-65px)] overflow-y-auto">
             <nav className="px-4 py-4 space-y-1.5" aria-label="Mobile Navigation">
+              {/* Quick Mobile Ask AI Button */}
+              <button
+                onClick={() => {
+                  setMobileOpen(false);
+                  setIsAssistantOpen(true);
+                }}
+                className="w-full flex items-center justify-center gap-2 p-3 mb-2 rounded-2xl text-xs font-bold font-mono text-cyan-300 bg-cyan-500/15 border border-cyan-500/40 shadow-[0_0_20px_rgba(14,165,233,0.25)] active:scale-95 transition-all"
+              >
+                <Sparkles size={14} className="text-cyan-400 animate-pulse" />
+                <span>Ask Pathy AI Assistant 💬</span>
+              </button>
+
               {NAV_LINKS.map(({ to, label, icon: Icon }) => {
                 const active = isActive(to);
                 return (
                   <Link
                     key={to}
                     to={to}
-                    onClick={() => handleNavClick(to)}
+                    onClick={() => {
+                      handleNavClick(to);
+                      setMobileOpen(false);
+                    }}
                     className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all active:scale-95 whitespace-nowrap ${
                       active
                         ? 'bg-amber-500/15 text-amber-300 font-bold border border-amber-500/30 shadow-[0_0_16px_rgba(245,158,11,0.2)]'
