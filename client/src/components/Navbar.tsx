@@ -93,8 +93,8 @@ export const Navbar: React.FC = () => {
       <header
         className={`sticky top-0 z-50 transition-all duration-300 ${
           scrolled
-            ? 'py-2 bg-[#0f1422]/92 backdrop-blur-2xl border-b border-white/[0.1] shadow-[0_16px_40px_-16px_rgba(0,0,0,0.7)]'
-            : 'py-3.5 bg-[#121829]/80 backdrop-blur-xl border-b border-white/[0.08]'
+            ? 'py-2 bg-[#04060d]/92 backdrop-blur-2xl border-b border-white/[0.08] shadow-[0_16px_40px_-16px_rgba(0,0,0,0.85)]'
+            : 'py-3.5 bg-[#050811]/75 backdrop-blur-xl border-b border-white/[0.06]'
         }`}
       >
         <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -357,7 +357,7 @@ export const Navbar: React.FC = () => {
 
         {/* ── Mobile Navigation Drawer ────────────────────────── */}
         {mobileOpen && user && (
-          <div className="lg:hidden mt-2 border-t border-white/[0.1] bg-[#101726]/98 backdrop-blur-2xl animate-fade-in shadow-2xl max-h-[calc(100vh-65px)] overflow-y-auto">
+          <div className="lg:hidden mt-2 border-t border-white/[0.08] bg-[#070912]/98 backdrop-blur-2xl animate-fade-in shadow-2xl max-h-[calc(100vh-65px)] overflow-y-auto">
             <nav className="px-4 py-4 space-y-1.5" aria-label="Mobile Navigation">
               {/* Quick Mobile Ask AI Button */}
               <button
