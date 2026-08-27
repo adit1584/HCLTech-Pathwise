@@ -11,6 +11,8 @@ import {
   Loader2,
   Unlock,
   ChevronRight,
+  ChevronDown,
+  ChevronsUpDown,
   BookOpen,
   Trophy,
   Zap,
@@ -141,6 +143,24 @@ export const RoadmapPage: React.FC = () => {
       return new Set();
     }
   });
+
+  // Collapsible Milestone Accordions
+  const [collapsedMilestones, setCollapsedMilestones] = useState<Record<string, boolean>>({});
+
+  const toggleMilestone = (mNum: string) => {
+    setCollapsedMilestones(prev => ({
+      ...prev,
+      [mNum]: !prev[mNum],
+    }));
+  };
+
+  const toggleAllMilestones = (collapse: boolean) => {
+    const next: Record<string, boolean> = {};
+    Object.keys(milestones).forEach(m => {
+      next[m] = collapse;
+    });
+    setCollapsedMilestones(next);
+  };
 
   useEffect(() => {
     try {
@@ -432,12 +452,38 @@ export const RoadmapPage: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div className="space-y-10">
+        <div className="space-y-6">
+          {/* Milestone Quick Action Toolbar */}
+          <div className="flex items-center justify-between gap-3 text-xs font-mono text-[var(--text-muted)] pb-2 border-b border-[var(--border-dim)]">
+            <span className="flex items-center gap-1.5 font-bold text-slate-300">
+              <ChevronsUpDown size={14} className="text-amber-400" />
+              <span>{Object.keys(milestones).length} Progressive Learning Milestones</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => toggleAllMilestones(false)}
+                className="px-2.5 py-1 rounded-lg bg-[var(--bg-surface)] hover:bg-[var(--bg-raised)] border border-[var(--border-subtle)] hover:text-white transition-all cursor-pointer"
+              >
+                Expand All
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleAllMilestones(true)}
+                className="px-2.5 py-1 rounded-lg bg-[var(--bg-surface)] hover:bg-[var(--bg-raised)] border border-[var(--border-subtle)] hover:text-white transition-all cursor-pointer"
+              >
+                Collapse All
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-8">
           {Object.entries(milestones).map(([mNum, items], mIdx) => {
             const mCompletedCount = items.filter(i => isItemCompleted(i)).length;
             const mTotalCount = items.length;
             const mCompleted = mCompletedCount === mTotalCount && mTotalCount > 0;
             const mActive = items.some(i => i.status === 'available');
+            const isCollapsed = !!collapsedMilestones[mNum];
 
             return (
               <section
@@ -445,10 +491,15 @@ export const RoadmapPage: React.FC = () => {
                 className="animate-fade-up space-y-4"
                 style={{ animationDelay: `${mIdx * 60}ms` }}
               >
-                {/* Milestone heading */}
-                <div className="flex items-center gap-3">
+                {/* Interactive Milestone Heading Accordion Button */}
+                <button
+                  type="button"
+                  onClick={() => toggleMilestone(mNum)}
+                  className="w-full flex items-center gap-3 group text-left cursor-pointer select-none"
+                  aria-expanded={!isCollapsed}
+                >
                   <div
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-xs font-bold font-mono transition-all shadow-md"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-xs font-bold font-mono transition-all shadow-md group-hover:scale-105"
                     style={{
                       background: mCompleted ? 'rgba(16,185,129,0.18)' : mActive ? 'rgba(245,158,11,0.18)' : 'rgba(255,255,255,0.04)',
                       border: `1.5px solid ${mCompleted ? 'rgba(16,185,129,0.5)' : mActive ? 'rgba(245,158,11,0.5)' : 'var(--border-dim)'}`,
@@ -459,7 +510,7 @@ export const RoadmapPage: React.FC = () => {
                     M{mNum}
                   </div>
                   <div className="flex-1 flex items-center gap-3 min-w-0">
-                    <h2 className="text-base font-bold text-[var(--text-primary)] font-display whitespace-nowrap">
+                    <h2 className="text-base font-bold text-[var(--text-primary)] font-display whitespace-nowrap group-hover:text-amber-300 transition-colors">
                       Milestone {mNum}
                     </h2>
                     <div className="flex-1 h-px bg-[var(--border-dim)]" />
@@ -473,11 +524,18 @@ export const RoadmapPage: React.FC = () => {
                         ✓ COMPLETED
                       </span>
                     )}
+                    <div className="p-1 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-slate-400 group-hover:text-white transition-all">
+                      <ChevronDown
+                        size={14}
+                        className={`transition-transform duration-300 ${isCollapsed ? '-rotate-90 text-slate-500' : 'text-amber-400'}`}
+                      />
+                    </div>
                   </div>
-                </div>
+                </button>
 
                 {/* Items */}
-                <div className="space-y-3 ml-2 sm:ml-12">
+                {!isCollapsed && (
+                  <div className="space-y-3 ml-2 sm:ml-12 animate-fade-in">
                   {items.map((item, idx) => {
                     const itemTitleSlug = (item.title || 'step').toLowerCase().replace(/[^a-z0-9]+/g, '-');
                     const itemKey = (item.id && item.id.trim().length > 3 && item.id !== 'undefined' && item.id !== 'null')
@@ -691,9 +749,11 @@ export const RoadmapPage: React.FC = () => {
                     );
                   })}
                 </div>
+                )}
               </section>
             );
           })}
+          </div>
         </div>
       )}
 

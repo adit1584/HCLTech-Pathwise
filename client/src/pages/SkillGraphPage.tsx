@@ -82,6 +82,7 @@ export const SkillGraphPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'COMPLETED' | 'IN_PROGRESS' | 'READY' | 'LOCKED'>('ALL');
   const [loading, setLoading] = useState(true);
+  const [showGestureHint, setShowGestureHint] = useState(true);
 
   // Load Graph for a specific role
   const loadGraphForRole = useCallback(async (roleId?: string) => {
@@ -548,6 +549,20 @@ export const SkillGraphPage: React.FC = () => {
         {/* ── View 1: Canvas Mode ─────────────────────────────────── */}
         {viewMode === 'graph' && (
           <div className="flex-1 h-full relative">
+            {showGestureHint && !loading && nodes.length > 0 && (
+              <div className="md:hidden absolute top-3 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-cyan-500/40 text-cyan-300 text-[11px] font-mono shadow-xl flex items-center gap-2 animate-fade-in backdrop-blur-md">
+                <span>💡 Pinch to zoom · Drag to pan DAG</span>
+                <button
+                  type="button"
+                  onClick={() => setShowGestureHint(false)}
+                  className="text-slate-400 hover:text-white ml-1 font-bold cursor-pointer"
+                  aria-label="Dismiss gesture hint"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
             {loading ? (
               <div className="flex h-full items-center justify-center text-[var(--text-muted)] text-sm">
                 <div className="h-6 w-6 border-2 border-[var(--primary-500)] border-t-transparent rounded-full animate-spin mr-2" />
